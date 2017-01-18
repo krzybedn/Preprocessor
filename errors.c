@@ -25,3 +25,10 @@ void error_unknown_directive(const char *name)
     fprintf(stderr, "ERROR!!! Unkown directive type: %s", name);
 }
 
+void error_include(const char *name)
+{
+    fprintf(stderr, "ERROR!!! I couldn't find header: ", name);
+}
+
+
+

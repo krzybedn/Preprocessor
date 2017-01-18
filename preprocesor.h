@@ -39,5 +39,6 @@ extern void error_file_open(const char *name);
 extern void error_long_name(const char *name);
 extern void error_endless_name(const char *name);
 extern void error_unknown_directive(const char *name);
+extern void error_include(const char *name);
 
 #endif // PREPROCESOR_H_INCLUDED
