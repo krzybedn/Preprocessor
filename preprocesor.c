@@ -45,10 +45,9 @@ void read_whitespace(FILE *in)
     ungetc(c, in);
 }
 
-
 bool rewrite(FILE *in, FILE *out)
 {
-    _define *root;
+    //_define *root;
     char *line;
     while((line=getline(in))!=NULL && *line!='\0')
     {
@@ -69,15 +68,16 @@ bool rewrite(FILE *in, FILE *out)
             }
             else
             {
-                error_unknown_directive(type);
+                fprintf(out, "%s\n",line);
+                /*error_unknown_directive(type);
                 free(type);
-                return 1;
+                return 1;*/
             }
             free(type);
         }
         else
         {
-            fprintf(out, "%s\n",line);
+            fprintf(out, "%s",line);
         }
     }
     if(line==NULL)
@@ -100,6 +100,7 @@ bool rewrite_include(char *in, FILE *out)
     }
 
     char *adress;
+    FILE *header;
     if(*in=='"')
     {
         in++;
@@ -118,6 +119,12 @@ bool rewrite_include(char *in, FILE *out)
             return 1;
         }
         adress=name;
+        header=fopen(adress, "r");
+        if(header == NULL)
+        {
+            error_file_open(adress);
+            return 1;
+        }
     }
     else if(*in=='<')
     {
@@ -136,24 +143,47 @@ bool rewrite_include(char *in, FILE *out)
             error_endless_name(name);
             return 1;
         }
-        adress=concat("include\\", name);
-        if(adress==NULL)
+        bool tmp=1;
+        FILE *includes=fopen("include.txt", "r");
+        if(includes == NULL)
         {
-            error_malloc();
+            error_file_open("include.txt");
             return 1;
         }
-    }
-    FILE *header=fopen(adress, "r");
-    if(header == NULL)
-    {
-        error_file_open(adress);
-        return 1;
+
+        do
+        {
+            char *include_adress=getline(includes);
+            if(*include_adress=='\0')
+            {
+                error_include(name);
+                return 1;
+            }
+            adress=concat(include_adress, name);
+            free(include_adress);
+
+            if(adress!=NULL)
+            {
+                header=fopen(adress, "r");
+                if(header == NULL)
+                {
+                    error_file_open(adress);
+                    return 1;
+                }
+                else
+                {
+                    tmp=0;
+                }
+            }
+        }while(tmp);
+
     }
     free(adress);
 
-    char c;
+    /*char c;
     while((c=getc(header))!=EOF)
-        putc(c, out);
+        putc(c, out);//*/
+    rewrite(header, out);
     fclose(header);
     return 0;
 }

@@ -43,6 +43,8 @@ char *getline(FILE *in)
         }
         *line++ = c;
     }
+    if(c=='\n')
+        *line++='\n';
     *line = '\0';
     return line_begin;
 }
