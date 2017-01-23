@@ -1,19 +1,12 @@
 #include "preprocesor.h"
 
-
-
+/*#define cos (asd, def) (asd+def)
+#define CHAR_MIN (15)
+#include <limits.h>*/
+//#  define cos 2
 int main()
 {
-    FILE *in, *out;
-    if(open(&in, &out))
-    {
-        return 1;
-    }
-    rewrite(in, out);
-    //rewrite_include(in, out);
-
-
-
-    close(in, out);
-    return 0;
+    //printf("%d", cos);
+    //printf("%d", cos(2,-3));
+    return cosik();
 }

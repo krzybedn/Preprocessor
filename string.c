@@ -3,6 +3,30 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
+bool is_letter(char c)//Liera zazywam dowolny znak z gropy litery male i duze, cyfry oraz podkreslenia
+{
+    return ((c>='a' && c<='z') || (c>='A' && c<='Z') || (c>='0' && c<='9') || c=='_');
+}
+
+char *add_char_to_string(char **s, char *s_begin, size_t *len,  size_t *lenmax, char c)
+{
+    if(--(*len)==0)
+    {
+        *len=*lenmax;
+        char *s_new=realloc(s_begin, sizeof(char)*(*lenmax*=2));
+        if(s_new==NULL)
+        {
+            free(s_begin);
+            return NULL;
+        }
+        *s=s_new+(*s-s_begin);
+        s_begin=s_new;
+    }
+    **s=c;
+    (*s)++;
+    return s_begin;
+}
+
 char *concat(const char *s1, const char *s2)
 {
     char *result = malloc(strlen(s1)+strlen(s2)+1);
@@ -19,31 +43,24 @@ char *concat(const char *s1, const char *s2)
 
 char *getline(FILE *in)
 {
-    char *line=malloc(100), *line_begin=line;
-    size_t lenmax=100, len=lenmax;
-    int c;
-
+    char *line=malloc(100);
     if(line==NULL)
         return NULL;
 
+    char *line_begin=line;
+    size_t lenmax=100, len=lenmax;
+    int c;
+
     while((c=getc(in))!=EOF && c!='\n')
     {
-        if(--len==0)
+        line_begin=add_char_to_string(&line, line_begin, &len, &lenmax, c);
+        if(line_begin==NULL)
         {
-            len=lenmax;
-            char *line_new=realloc(line_begin, lenmax*=2);
-
-            if(line_new==NULL)
-            {
-                free(line_begin);
-                return NULL;
-            }
-            line=line_new+(line-line_begin);
-            line_begin=line_new;
+            return NULL;
         }
-        *line++ = c;
     }
-    if(c=='\n')
+
+    if(c=='\n' && line==line_begin)
         *line++='\n';
     *line = '\0';
     return line_begin;
@@ -79,29 +96,21 @@ char *substring(const char *s, int b, int l)
     return result_copy;
 }
 
-char *subword(const char *s)
+char *subword(char **s)
 {
-    char *word=malloc(100), *word_begin=word;
-    size_t lenmax=100, len=lenmax;
+    char *word=malloc(sizeof(char)*10), *word_begin=word;
+    size_t lenmax=10, len=lenmax;
     if(word==NULL)
         return NULL;
 
-    while(*s!='\0' && ((*s>='a' && *s<='z') || (*s>='A' && *s<='Z') || *s=='_'))
+    while(**s!='\0' && is_letter(**s))
     {
-        if(--len==0)
+        word_begin=add_char_to_string(&word, word_begin, &len, &lenmax, **s);
+        if(word_begin==NULL)
         {
-            len=lenmax;
-            char *word_new=realloc(word_begin, lenmax*=2);
-
-            if(word_new==NULL)
-            {
-                free(word_begin);
-                return NULL;
-            }
-            word=word_new+(word-word_begin);
-            word_begin=word_new;
+            return NULL;
         }
-        *word++=*(s++);
+        (*s)++;
     }
     *word = '\0';
     return word_begin;
