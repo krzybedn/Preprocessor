@@ -31,7 +31,17 @@
 		<Compiler>
 			<Add option="-Wall" />
 		</Compiler>
+		<Unit filename="errors.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="main.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="preprocesor.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="preprocesor.h" />
+		<Unit filename="string.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Extensions>

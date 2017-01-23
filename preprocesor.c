@@ -63,7 +63,7 @@ void close(FILE *in, FILE *out)
 }
 
 //glowna funkcja
-bool cosik()
+bool cosik()///---
 {
     FILE *in, *out;
     if(open(&in, &out))
@@ -224,7 +224,7 @@ bool rewrite(FILE *in, FILE *out, _define *root, _include *includes_list)///---
 }
 
 //fukcja wywolywana po znalezieniu dyrektywy #include i pozwalajaca otworzyc odpowiedni plik naglowkowy i go przepisac
-bool rewrite_include(char *in, FILE *out, _define *define_list, _include *includes_list)///---
+bool rewrite_include(char *in, FILE *out, _define *define_list, _include *includes_list)
 {
     ///sprawdzic powtorke lub petle
     while(*in<=' ')
