@@ -42,7 +42,7 @@ void waring_define_exist(const char *name)
 
 void warning_no_include(const char *name)
 {
-    fprintf(stderr, "WARNING! I couldn't find include file: %s. Check did you add all possible paths.\n", name);
+    fprintf(stderr, "WARNING! I couldn't find include file: %s. Check did you add all possible paths %s.\n", name);
 }
 
 

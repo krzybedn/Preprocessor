@@ -90,7 +90,6 @@ char *substring(const char *s, int b, int l)
     for(int i=0; i<l && *s!='\0'; i++)
     {
         *result++=*(s++);
-        printf("%s %s\n", result_copy);
     }
     *result='\0';
     return result_copy;
