@@ -1,13 +1,19 @@
 #include "preprocesor.h"
 
 //fukcja otwierajaca plik wejsciowy i wyjsciowy
-bool open(FILE **in, FILE **out)///---
+char *open(FILE **in, FILE **out)///---
 {
     ///printf("Podaj adres pliku wejsciowego: ");
-
-    char *name=malloc(sizeof(char)*10), *name_begin=name;
+    *in=*out=NULL;
+    char *name=malloc(sizeof(char)*10);
+    if(name==NULL)
+    {
+        error_malloc();
+        return NULL;
+    }
     size_t lenmax=10, len=lenmax;
-    int c=99;
+    int c;
+    char *name_begin=name;
     while((c=getc(stdin))>' ')
     {
         name_begin=add_char_to_string(&name, name_begin, &len, &lenmax, c);
@@ -18,21 +24,23 @@ bool open(FILE **in, FILE **out)///---
         }
     }
     *name='\0';
-    *in = fopen(name_begin, "r");
-    if(*in == NULL)
+    *in=fopen(name_begin, "r");
+    if(*in==NULL)
     {
         error_file_open(name_begin);
-        return 1;
+        return NULL;
     }
-    free(name_begin);
+    char *address=name_begin;
 
     ///printf("Podaj adres pliku docelowego: ");
-
     name=malloc(sizeof(char)*10);
+    if(name==NULL)
+    {
+        error_malloc();
+        return NULL;
+    }
     name_begin=name;
-    lenmax=10;
-    len=lenmax;
-    c=99;
+    lenmax=len=10;
     while((c=getc(stdin))>' ')
     {
         name_begin=add_char_to_string(&name, name_begin, &len, &lenmax, c);
@@ -43,14 +51,14 @@ bool open(FILE **in, FILE **out)///---
         }
     }
     *name='\0';
-    *out = fopen(name_begin, "w");
-    if(*out == NULL)
+    *out=fopen(name_begin, "w");
+    if(*out==NULL)
     {
         error_file_open(name_begin);
-        return 1;
+        return NULL;
     }
     free(name_begin);
-    return 0;
+    return address;
 }
 
 //fukcja zamykajaca plik wejsciowy i wyjsciowy
@@ -66,27 +74,51 @@ void close(FILE *in, FILE *out)
 bool cosik()///---
 {
     FILE *in, *out;
-    if(open(&in, &out))
+    char *address;
+    if((address=open(&in, &out))==NULL)
     {
+        close(in, out);
+        return 1;
+    }
+    char *name=address;
+    if((address=split_by_last_slash(&name))==NULL)
+    {
+        error_malloc();
+        free(name);
         close(in, out);
         return 1;
     }
     _define *root=alloc_define();
     if(root==NULL)
     {
+        free(name);
+        free(address);
         close(in, out);
         return 1;
     }
     _include *includes_list=alloc_include();
     if(includes_list==NULL)
     {
+        free(name);
+        free(address);
         destroy_define(root);
         close(in, out);
         return 1;
     }
-    bool res=rewrite(in, out, root, includes_list);
+    if(add_include(includes_list, name))
+    {
+        free(name);
+        free(address);
+        destroy_include(includes_list);
+        destroy_define(root);
+        close(in, out);
+        return 1;
+    }
+    bool res=rewrite(in, out, root, includes_list, address);
     //niezaleznie od wyniku, wszystkie zmienne zdefiniowane w tej funckji byly poprawne, wiec nalezy je normalnie zwolnic przed wyjsciem z niej
 
+    free(name);
+    free(address);
     destroy_define(root);
     destroy_include(includes_list);
     close(in, out);
@@ -105,7 +137,24 @@ _define* alloc_define()
     for(int i=0; i<63; i++)
         new_define->childs[i]=NULL;
     new_define->exist=0;
+    new_define->variables_positions=NULL;
+    new_define->variables_occur=NULL;
     return new_define;
+}
+
+//desktruktor pojedynczego elementu _define
+void destroy_single_define(_define *root)
+{
+    if(root->exist)
+    {
+        if(root->value!=NULL)
+            free(root->value);
+        if(root->variables_positions!=NULL)
+            free(root->variables_positions);
+        if(root->variables_occur!=NULL)
+            free(root->variables_occur);
+    }
+    free(root);
 }
 
 //destruktor struktury _define
@@ -115,7 +164,7 @@ void destroy_define(_define *root)
         return;
     for(int i=0; i<63; i++)
         destroy_define(root->childs[i]);
-    free(root);
+    destroy_single_define(root);
 }
 
 //konstruktor struktury _include
@@ -143,15 +192,22 @@ void destroy_include(_include *root)
     free(root);
 }
 
+/*******************/
 //glowna funkcja oslugujaca przepisanie calego pliku i wywolujaca pozostale funkcje
-bool rewrite(FILE *in, FILE *out, _define *root, _include *includes_list)///---
+bool rewrite(FILE *in, FILE *out, _define *root, _include *includes_list, char *source)///---
 {
     char *line;
     bool multiline_comment=0;
     while((line=getline(in))!=NULL && *line!='\0')
     {
-        char *line_begin=line;
-        printf("%s\n", line);
+        char *line_begin=delete_comments(line, &multiline_comment);
+        if(line_begin==NULL)
+        {
+            error_malloc();
+            free(line);
+            return 1;
+        }
+        line=line_begin;
         if(*line=='#')
         {
             line++;
@@ -165,29 +221,18 @@ bool rewrite(FILE *in, FILE *out, _define *root, _include *includes_list)///---
                 return 1;
 
             }
-            if(compare(type, "include"))///
+            if(compare(type, "include"))
             {
-                ///fprintf(out, "#%s %s\n", type, line);
-                if(rewrite_include(line, out, root, includes_list))
+                if(rewrite_include(line, out, root, includes_list, source))
                 {
                     free(type);
                     free(line_begin);
                     return 1;
-                }///*/
-            }
-            else if(compare(type, "define"))///
-            {
-                ///fprintf(out, "#%s %s\n", type, line);
-                if(add_define(line, root))
-                {
-                    free(type);
-                    free(line_begin);
-                    return 1;
-                }///*/
+                }
             }
             else
             {
-                line=rewrite_define(line, root, &multiline_comment);
+                line=rewrite_define(line, root);
                 free(line_begin);
                 if(line==NULL)
                 {
@@ -195,13 +240,25 @@ bool rewrite(FILE *in, FILE *out, _define *root, _include *includes_list)///---
                     return 1;
                 }
                 line_begin=line;
-                fprintf(out, "#%s %s\n",type, line);
+                if(compare(type, "define"))
+                {
+                    if(add_define(line, root))
+                    {
+                        free(type);
+                        free(line_begin);
+                        return 1;
+                    }
+                }
+                else
+                {
+                    fprintf(out, "#%s %s\n",type, line);
+                }
             }
             free(type);
         }
         else
         {
-            line=rewrite_define(line, root, &multiline_comment);
+            line=rewrite_define(line, root);///----?
             free(line_begin);
             if(line==NULL)
             {
@@ -224,9 +281,8 @@ bool rewrite(FILE *in, FILE *out, _define *root, _include *includes_list)///---
 }
 
 //fukcja wywolywana po znalezieniu dyrektywy #include i pozwalajaca otworzyc odpowiedni plik naglowkowy i go przepisac
-bool rewrite_include(char *in, FILE *out, _define *define_list, _include *includes_list)
+bool rewrite_include(char *in, FILE *out, _define *define_list, _include *includes_list, char *source)
 {
-    ///sprawdzic powtorke lub petle
     while(*in<=' ')
         in++;
     if(*in=='\0')
@@ -274,13 +330,20 @@ bool rewrite_include(char *in, FILE *out, _define *define_list, _include *includ
 
     if(end=='"')
     {
-        header=fopen(adress_begin, "r");
+        char *full_address=concat(source, adress_begin);
+        if(full_address==NULL)
+        {
+            error_malloc();
+            return 1;
+        }
+        header=fopen(full_address, "r");
         if(header == NULL)
         {
+            free(full_address);
             warning_no_include(adress_begin);
             return 0;
         }
-        free(adress_begin);
+        free(full_address);
     }
     else if(*in=='>')
     {
@@ -300,22 +363,23 @@ bool rewrite_include(char *in, FILE *out, _define *define_list, _include *includ
                 warning_no_include(adress_begin);
                 return 0;
             }
-            char *adress=concat(include_adress, adress_begin);
+            char *full_address=concat(include_adress, adress_begin);
             free(include_adress);
 
-            if(adress!=NULL)
+            if(full_address!=NULL)
             {
-                header=fopen(adress, "r");
+                header=fopen(full_address, "r");
                 if(header!=NULL)
                 {
                     tmp=0;
                 }
             }
+            free(full_address);
         }while(tmp);
         free(adress_begin);
     }
 
-    bool res=rewrite(header, out, define_list, includes_list);
+    bool res=rewrite(header, out, define_list, includes_list, source);
     fclose(header);
     return res;
 }
@@ -339,9 +403,12 @@ _define *go_to_define(char *in, _define *root)
 }
 
 //fukcja wywolywana w celu sprawdzenia, czy w danej linii wystepuja uzycia juz zdefiniowanych makrodyrektyw #define
-char* rewrite_define(char *in, _define *root, bool *multiline_comment)///---
+char* rewrite_define(char *in, _define *root)///---
 {
+    printf("\n----------\n%s\n-----------\n", in);
+            /**/printf("0");
     char *line=malloc(sizeof(char)*10);
+            /**/printf("1");
     if(line==NULL)
     {
         error_malloc();
@@ -350,98 +417,167 @@ char* rewrite_define(char *in, _define *root, bool *multiline_comment)///---
     char *line_begin=line;
     size_t lenmax=10, len=lenmax;
     _define *root_copy=root;
+    //char *new_in=NULL;
+            /**/printf("2");
     while(*in!='\0')
     {
+            /**/printf("A");
         while(*in!='\0' && !is_letter(*in))
         {
-            if(!*multiline_comment && *in=='/')
+            /**/printf("a");
+            line_begin=add_char_to_string(&line, line_begin, &len, &lenmax, *in++);
+            /**/printf("b");
+            if(line_begin==NULL)
             {
-                if(*(in+1)=='/')
-                {
-                    *line='\0';
-                    return line;
-                }
-                else if(*(in+1)=='*')
-                {
-                    *multiline_comment=1;
-                    in+=2;
-                }
-                else
-                {
-                    line_begin=add_char_to_string(&line, line_begin, &len, &lenmax, *in++);
-                    if(line_begin==NULL)
-                    {
-                        error_malloc();
-                        return NULL;
-                    }
-                }
+                error_malloc();
+                /*if(new_in!=NULL)
+                    free(new_in);*/
+                return NULL;
             }
-            else if(*multiline_comment)
-            {
-                if(*in=='*' && *(in+1)=='/')
-                {
-                    *multiline_comment=0;
-                    in++;
-                }
-                in++;
-            }
-            else
-            {
-                line_begin=add_char_to_string(&line, line_begin, &len, &lenmax, *in++);
-                if(line_begin==NULL)
-                {
-                    error_malloc();
-                    return NULL;
-                }
-            }
+            /**/printf("c");
         }
+            /**/printf("B");
         if(*in=='\0')
         {
             *line='\0';
+            /*if(new_in!=NULL)
+                free(new_in);*/
             return line_begin;
         }
+            /**/printf("C");
         char *word=subword(&in);
-        if(!*multiline_comment)
+            /**/printf("D");
+        if(word==NULL)
         {
-            root=go_to_define(word, root);
-            if(root!=NULL && root->exist)
+            error_malloc();
+            /*if(new_in!=NULL)
+                free(new_in);*/
+            free(line_begin);
+            return NULL;
+        }
+            /**/printf("E");
+        char *word_begin=word;
+            /**/printf("F");
+        root=go_to_define(word, root);
+            /**/printf("G");
+        if(root!=NULL && root->exist)
+        {
+            /**/printf("H");
+            if(root->variables_exist)
             {
-                if(root->exist_variebles)
-                {
-                    ///podmiana zmiennych
-                }
-                else
-                {
-                    for(int i=0; i<root->value_length; i++)
+            /**/printf("I\n");
+                    ;/***if(*in!='(')
                     {
-                        line_begin=add_char_to_string(&line, line_begin, &len, &lenmax, *(root->value+i));
-                        if(line_begin==NULL)
-                        {
-                            error_malloc();
-                            return NULL;
-                        }
+                        error_define_not_enough_variables(word);
+                        /*if(new_in!=NULL)
+                            free(new_in);
+                        free(line_begin);
+                        free(word);
+                        return NULL;
                     }
+                    in++;
+                    //char *copy=new_in;
+                    char *new_in=rewrite_define(in, root_copy);
+                    /*if(copy!=NULL)
+                        free(copy);
+                    if(new_in==NULL)
+                    {
+                        /*if(new_in!=NULL)
+                            free(new_in);
+                        free(line_begin);
+                        free(word);
+                        return NULL;
+                    }
+                    //in=new_in;
+                    char **variables_begin=read_variables_values(&in, root->variables_number, word);
+                    if(variables_begin==NULL)
+                    {
+                        /*if(new_in!=NULL)
+                            free(new_in);
+                        free(word);
+                        free(line_begin);
+                        return NULL;
+                    }
+
+                    char *expanded_define=rewrite_define_with_variables(root, variables_begin);
+                    for(char **variables=variables_begin; variables-variables_begin<root->variables_number; variables++)
+                        free(*variables);
+                    free(variables_begin);
+                    if(expanded_define==NULL)
+                    {
+                        /*if(new_in!=NULL)
+                            free(new_in);
+                        free(word_begin);
+                        free(line_begin);
+                        return NULL;
+                    }
+                    *line='\0';
+                    char *new_line=concat(line_begin, expanded_define);
+                    if(new_line==NULL)
+                    {
+                        error_malloc();
+                        free(word);
+                        /*if(new_in!=NULL)
+                            free(new_in);
+                        free(line_begin);
+                        free(expanded_define);
+                        return NULL;
+                    }
+                    free(line_begin);
+                    line_begin=new_line;*/
                 }
-            }
             else
             {
-                char *word_begin=word;
-                while(*word!='\0')
+            /**/printf("\nJ");
+                for(int i=0; i<root->value_length; i++)
                 {
-                    line_begin=add_char_to_string(&line, line_begin, &len, &lenmax, *word++);
+            /**/printf("a");
+                    line_begin=add_char_to_string(&line, line_begin, &len, &lenmax, *(root->value+i));
+
+            /**/printf("b");
                     if(line_begin==NULL)
                     {
                         error_malloc();
-                        free(word_begin);
+                        free(word);
+                        /*if(new_in!=NULL)
+                            free(new_in);*/
                         return NULL;
                     }
+            /**/printf("c");
                 }
-                free(word_begin);
             }
-            root=root_copy;
         }
+        else
+        {
+            /**/printf("\nK");
+            *line='\0';
+
+            /**/printf("a");
+            char *new_line=concat(line_begin, word_begin);
+            /**/printf("b");
+            if(new_line==NULL)
+            {
+                error_malloc();
+                free(word_begin);
+                return NULL;
+            }
+            /**/printf("c");
+            line=new_line+(line-line_begin);
+            line_begin=new_line;
+            /**/printf("d");
+            /**/printf("e");
+        }
+            /**/printf("L");
+        root=root_copy;
+            /**/printf("M--%s||", word_begin);
+        free(word_begin);
+            /**/printf("N");
     }
+            /**/printf("3");
     *line='\0';
+            /**/printf("4\n--------------------------------\n");
+    /*if(new_in!=NULL)
+        free(new_in);*/
     return line_begin;
 }
 
@@ -450,7 +586,7 @@ bool add_define(char *line, _define *root)
 {
     while(*line<=' ')
         line++;
-    char *name=subword(&line), *name_copy=name;
+    char *name=subword(&line), *name_begin=name;
     ///moze wydzielic do innej funkcji
     while(root!=NULL && is_letter(*name))
     {
@@ -460,7 +596,7 @@ bool add_define(char *line, _define *root)
             {
                 if((root->childs[*name-'a']=alloc_define())==NULL)
                 {
-                    free(name_copy);
+                    free(name_begin);
                     error_malloc();
                     return 1;
                 }
@@ -473,7 +609,7 @@ bool add_define(char *line, _define *root)
             {
                 if((root->childs[26+*name-'A']=alloc_define())==NULL)
                 {
-                    free(name_copy);
+                    free(name_begin);
                     error_malloc();
                     return 1;
                 }
@@ -486,7 +622,7 @@ bool add_define(char *line, _define *root)
             {
                 if((root->childs[52+*name-'0']=alloc_define())==NULL)
                 {
-                    free(name_copy);
+                    free(name_begin);
                     error_malloc();
                     return 1;
                 }
@@ -499,7 +635,7 @@ bool add_define(char *line, _define *root)
             {
                 if((root->childs[62]=alloc_define())==NULL)
                 {
-                    free(name_copy);
+                    free(name_begin);
                     error_malloc();
                     return 1;
                 }
@@ -510,40 +646,59 @@ bool add_define(char *line, _define *root)
     }
 
     if(root->exist)
-        waring_define_exist(name_copy);
-
+        waring_define_exist(name_begin);
+    root->exist=1;
     if(*line=='(')
     {
-        ///parametr
-        root->exist_variebles=1;
-    }
-    else
-    {
-        root->exist_variebles=0;
-    }
-    while(*line!='\0' && *line<=' ')
-        line++;
-    root->exist=1;
-    root->value=malloc(sizeof(char)*20);
-    if(root->value==NULL)
-    {
-        free(name_copy);
-        error_malloc();
-        return 1;
-    }
-    char *word=root->value;
-    size_t lenmax=20, len=lenmax;
-    while(*line!='\0')
-    {
-        root->value=add_char_to_string(&word, root->value, &len, &lenmax, *line++);
-        if(root->value==NULL)
+        char **variables_begin;
+        variables_begin=read_variables_names(&line, &root->variables_number);
+        if(variables_begin==NULL)
         {
-            free(name_copy);
+            free(name_begin);
+            error_malloc();
+            return 1;
+        }
+        if(line=='\0')
+        {
+            error_endless_name(name_begin);
+            free(name_begin);
+            return 1;
+        }
+        root->variables_exist=1;
+        if(add_variables_to_define(root, line, variables_begin))
+        {
+            free(name_begin);
             error_malloc();
             return 1;
         }
     }
-    root->value_length=lenmax-len;
+    else
+    {
+        root->variables_exist=0;
+        while(*line!='\0' && *line<=' ')
+            line++;
+        root->value=malloc(sizeof(char)*20);
+        if(root->value==NULL)
+        {
+            free(name_begin);
+            error_malloc();
+            return 1;
+        }
+        char *word=root->value;
+        size_t lenmax=20, len=lenmax;
+        while(*line!='\0')
+        {
+            root->value=add_char_to_string(&word, root->value, &len, &lenmax, *line++);
+            if(root->value==NULL)
+            {
+                free(name_begin);
+                error_malloc();
+                return 1;
+            }
+        }
+        root->value_length=lenmax-len;
+    }
+
     return 0;
 }
 
@@ -582,6 +737,253 @@ bool add_include(_include *include_root, char *name)
     return 0;
 }
 
+//funkcja ma za zadanie wczytac zmienne, tkore beda uzywane w danej definicji i zwraca tablice zawierajaca ich nazwy
+char** read_variables_names(char **line, int *number)
+{
+    char **variables_begin=malloc(10*sizeof(char*));
+    if(variables_begin==NULL)
+    {
+        return NULL;
+    }
+    size_t variables_max=10, variables_num=10;
+    char **variables=variables_begin;
+    (*line)++;
+    while(**line!='\0' && **line!=')')
+    {
+        if(--variables_num==0)
+        {
+            char **variables_new=realloc(variables_begin, variables_max*2);
+            if(variables_new==NULL)
+            {
+                for(char** i=variables_begin; i<variables_begin+variables_max-variables_num+1; i++)
+                    free(i);
+                free(variables_begin);
+                return NULL;
+            }
+            variables_max*=2;
+            variables=variables_new+(variables-variables_begin);
+        }
+        *variables=subword(line);
+        if(*variables==NULL)
+        {
+            for(char** i=variables_begin; i<variables_begin+variables_max-variables_num; i++)
+                free(i);
+            free(variables_begin);
+            return NULL;
+        }
+        variables++;
+        while(**line!='\0' && **line<=' ')
+            (*line)++;
+        if(**line==',')
+            (*line)++;
+        while(**line!='\0' && **line<=' ')
+            (*line)++;
+    }
+    *number=variables_max-variables_num;
+    while(**line!='\0' && **line<=' ')
+        (*line)++;
+    (*line)++;
+    while(**line!='\0' && **line<=' ')
+        (*line)++;
+    return variables_begin;
+}
+
+///----
+bool add_variables_to_define(_define *root, char *line, char **variables_names)
+{
+    root->variables_positions=(int*)malloc(10*sizeof(int*));
+    if(root->variables_positions==NULL)
+    {
+        return 1;
+    }
+    root->variables_occur=(int*)malloc(10*sizeof(int));
+    if(root->variables_occur==NULL)
+    {
+        return 1;
+    }
+    root->value=(char*)malloc(10*sizeof(char));
+    if(root->value==NULL)
+    {
+        return 1;
+    }
+    size_t len=10, lenmax=10;
+    int variables_max=10;
+    root->variables_occur_number=0;
+    char *word=root->value;
+    while(*line!='\0')
+    {
+        while(!is_letter(*line))
+        {
+            root->value=add_char_to_string(&word, root->value, &len, &lenmax, *line++);
+            if(root->value==NULL)
+            {
+                return 1;
+            }
+        }
+        char *name=subword(&line);
+        if(name==NULL)
+        {
+            return 1;
+        }
+        for(int i=0; i<root->variables_number; i++)
+        {
+            if(compare(name, *(variables_names+i)))
+            {
+                if(root->variables_occur_number==variables_max)
+                {
+                    int *new_pos=(int*)realloc(root->variables_positions, variables_max*sizeof(int));
+                    if(new_pos==NULL)
+                    {
+                        free(root->variables_positions);
+                        return 1;
+                    }
+                    root->variables_positions=new_pos;
+
+                    int *new_occ=(int*)realloc(root->variables_occur, variables_max*sizeof(int));
+                    if(new_occ==NULL)
+                    {
+                        free(root->variables_occur);
+                        return 1;
+                    }
+                    root->variables_occur=new_occ;
+                    variables_max*=2;
+                }
+                *(root->variables_occur+root->variables_occur_number)=i;
+                *(root->variables_positions+root->variables_occur_number)=len;
+                root->value=add_char_to_string(&word, root->value, &len, &lenmax, '\n');
+                root->variables_occur_number++;
+                //wiemy ze cala zawartosc defina ma jedna linijke, mozemy wiec wykorzystac zank '\n' jako znak zmiennej
+                if(root->value==NULL)
+                {
+                    return 1;
+                }
+            }
+        }
+    }
+    root->value_length=len;
+    return 0;
+}
+
+char** read_variables_values(char **line, int number, char *define_name)
+{
+    char **variables_begin=malloc(number*sizeof(char*));
+    if(variables_begin==NULL)
+    {
+        return NULL;
+    }
+    char **variables=variables_begin;
+    int variables_number=0;
+    while(**line!='\0' && variables_number<number && **line!=')')
+    {
+        while(**line!='\0' && **line<=' ')
+            (*line)++;
+        *variables=(char*)malloc(10*sizeof(char));
+        if(*variables==NULL)
+        {
+            error_malloc();
+            for(variables=variables_begin; variables-variables_begin<variables_number-1; variables++)
+                free(*variables);
+            free(variables_begin);
+            return NULL;
+        }
+        int brackets=0;
+        char *name=*(variables);
+        size_t len=10, len_max=10;
+        while(**line!='\0' && !(brackets==0 && (**line==')' || **line==',' )))
+        {
+            if(**line=='(')
+                brackets++;
+            else if(**line==')')
+                brackets--;
+            *variables=add_char_to_string(&name, *variables, &len, &len_max, **line);
+            if(*variables==NULL)
+            {
+                error_malloc();
+                for(variables=variables_begin; variables-variables_begin<variables_number-1; variables++)
+                    free(*variables);
+                free(variables_begin);
+                return NULL;
+            }
+            (*line)++;
+        }
+        *name='\0';
+        variables++;
+        if(**line==',')
+            (*line)++;
+        variables_number++;
+    }
+    if(**line==EOF)
+    {
+        error_define_not_enough_variables(define_name);
+        for(variables=variables_begin; variables-variables_begin<number; variables++)
+            free(*variables);
+        free(variables);
+        return NULL;
+    }
+    if(**line==')' && variables_number!=number)
+    {
+        if(variables_number<number)
+            error_define_not_enough_variables(define_name);
+        else
+            error_define_too_much_variables(define_name);
+        for(variables=variables_begin; variables-variables_begin<number; variables++)
+            free(*variables);
+        free(variables);
+        return NULL;
+    }
+    (*line)++;
+
+    return variables_begin;
+}
+
+char* rewrite_define_with_variables(_define *root, char **variables_names)
+{
+    char *line_begin=(char*)malloc(10*sizeof(char));
+    if(line_begin==NULL)
+    {
+        error_malloc();
+        return NULL;
+    }
+    char *line=line_begin;
+    size_t len=10, len_max=len;
+    int variables_number=0;
+    char *in=root->value;
+    while(*in!='\0')
+    {
+        if(*in=='\n')
+        {
+            char *variable=*(variables_names+*(root->variables_occur+variables_number));
+            int var_len=string_length(variable);
+            *line='\0';
+            char *new_line=concat(line_begin, variable);
+            printf("%s\n", new_line);
+            if(new_line==NULL)
+            {
+                error_malloc();
+                free(line_begin);
+                return NULL;
+            }
+            line=new_line+(line-line_begin)+var_len;
+            *line='s';
+            len=len_max=string_length(new_line);
+            free(line_begin);
+            line_begin=new_line;
+            variables_number++;
+        }
+        else
+        {
+            line_begin=add_char_to_string(&line, line_begin, &len, &len_max, *in);
+            if(line_begin==NULL)
+            {
+                error_malloc();
+                return NULL;
+            }
+        }
+        in++;
+    }
+    *line='\0';
+    return line_begin;
+}
 /*//funkcja tworzaca kopie danego defina pod danym adresem
 bool copy_define(_define *d1, _define *d2)
 {
@@ -589,7 +991,7 @@ bool copy_define(_define *d1, _define *d2)
     {
         free(d1->value);
         if(d1->exist_variebles)
-            ;///free(d1->variebles);
+            ;///free(d1->variables);
     }
     d1->exist=1;
     d1->value_length=d2->value_length;
@@ -600,7 +1002,7 @@ bool copy_define(_define *d1, _define *d2)
     }
     for(int i=0; i<d1->value_length; i++)
         *(d1->value+i)=*(d2->value+i);
-    ///przepisz variebles;
+    ///przepisz variables;
 
     return 0;
 }
