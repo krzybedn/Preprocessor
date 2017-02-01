@@ -270,7 +270,6 @@ bool add_define(char *line)
     }
 
     char *new_line=rewrite_define(line);
-    printf("---->%s\n",new_line);
     if(new_line==NULL)
     {
         error_malloc();
@@ -278,7 +277,6 @@ bool add_define(char *line)
         return 1;
     }
     line=new_line;
-    printf("%s", line);
 
     if(element->exist)
         waring_define_exist(name_begin);
@@ -565,7 +563,6 @@ char* rewrite_define_with_variables(_define *element, char **variables_names)
             int var_len=string_length(variable);
             *line='\0';
             char *new_line=concat(line_begin, variable);
-            printf("%s\n", new_line);
             if(new_line==NULL)
             {
                 error_malloc();

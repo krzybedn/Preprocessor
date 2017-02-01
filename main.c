@@ -1,6 +1,6 @@
 #include "preprocesor.h"
 #include <string.h>
-
+#include <omp.h>
 /*#define cos (asd, def) (asd+def)
 #define CHAR_MIN (15)
 #include <limits.h>*
@@ -19,5 +19,5 @@ int main()
         s_begin=new_s;
         printf("%d %d %s\n", len_max, len, s_begin);
     }*/
-    return cosik();
+    return start();
 }

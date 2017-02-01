@@ -15,7 +15,7 @@
 //funkcje ogolne
 char *open(FILE **in, FILE **out);
 void close(FILE *in, FILE *out);
-bool cosik();
+bool start();
 bool rewrite(FILE *in, FILE *out);
 
 

@@ -38,6 +38,7 @@
 		<Unit filename="errors.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="errors.h" />
 		<Unit filename="include.c">
 			<Option compilerVar="CC" />
 		</Unit>

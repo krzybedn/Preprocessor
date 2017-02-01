@@ -12,9 +12,19 @@ char *open(FILE **in, FILE **out)///---
         return NULL;
     }
     size_t lenmax=10, len=lenmax;
-    int c;
+    int c,e;
     char *name_begin=name;
-    while((c=getc(stdin))>' ')
+    while((c=getc(stdin))!=EOF && c<=' ');
+    if(c=='"' || c=='\'')
+    {
+        e=c;
+    }
+    else
+    {
+        ungetc(c,stdin);
+        e=0;
+    }
+    while(((c=getc(stdin))>' ' && e==0) || (c!=e && e!=0))
     {
         name_begin=add_char_to_string(&name, name_begin, &len, &lenmax, c);
         if(name_begin==NULL)
@@ -31,7 +41,6 @@ char *open(FILE **in, FILE **out)///---
         return NULL;
     }
     char *address=name_begin;
-
     ///printf("Podaj adres pliku docelowego: ");
     name=malloc(sizeof(char)*10);
     if(name==NULL)
@@ -41,7 +50,17 @@ char *open(FILE **in, FILE **out)///---
     }
     name_begin=name;
     lenmax=len=10;
-    while((c=getc(stdin))>' ')
+    while((c=getc(stdin))!=EOF && c<=' ');
+    if(c=='"' || c=='\'')
+    {
+        e=c;
+    }
+    else
+    {
+        ungetc(c,stdin);
+        e=0;
+    }
+    while(((c=getc(stdin))>' ' && e==0) || (c!=e && e!=0))
     {
         name_begin=add_char_to_string(&name, name_begin, &len, &lenmax, c);
         if(name_begin==NULL)
@@ -71,7 +90,7 @@ void close(FILE *in, FILE *out)
 }
 
 //glowna funkcja
-bool cosik()///---
+bool start()///---
 {
     FILE *in, *out;
     char *address;
@@ -130,9 +149,6 @@ bool rewrite(FILE *in, FILE *out)
     bool multiline_comment=0;
     while((line=getline(in))!=NULL && *line!='\0')
     {
-        printf("-------------\n%s\n", line);
-        if(compare(line, "#  define __UNUSED_PARAM(x) x __attribute__ ((__unused__))"))
-            printf("   ");
         char *line_begin=delete_comments(line, &multiline_comment);
         if(line_begin==NULL)
         {
@@ -185,7 +201,6 @@ bool rewrite(FILE *in, FILE *out)
                         return 1;
                     }
                     line_begin=line;
-                    printf("%s\n", line);
                     fprintf(out, "#%s %s\n",type, line);
                 }
             }
@@ -201,8 +216,7 @@ bool rewrite(FILE *in, FILE *out)
                 return 1;
             }
             line_begin=line;
-            printf("%s\n", line);
-                fprintf(out, "%s",line);
+            fprintf(out, "%s",line);
             if(*line!='\n' && *line!='\0')//Dzieki takim zabiegom nie pomijamy linii pustych
                 fprintf(out, "\n");
         }
