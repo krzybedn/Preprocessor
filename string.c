@@ -1,5 +1,4 @@
 #include "my_string.h"
-#include <string.h>///---
 
 int string_length(const char *s)
 {
@@ -47,7 +46,7 @@ char *add_char_to_string(char **s, char *s_begin, size_t *len,  size_t *lenmax, 
 
 char *concat(const char *s1, const char *s2)
 {
-    char *result=(char*)malloc(strlen(s1)+strlen(s2)+10);
+    char *result=(char*)malloc(string_length(s1)+string_length(s2)+10);
 
     if(result==NULL)
     {

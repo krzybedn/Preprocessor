@@ -11,7 +11,7 @@ static _define *create_way_to_define(char *in);
 static char** read_variables_names(char **line, int *number);
 static bool add_variables_to_define(_define *root, char *line, char **variables_names);
 static char** read_variables_values(char **line, int number, char *define_name);
-static char* rewrite_define_with_variables(_define *root, char **variables_names);
+static char* expand_define_with_variables(_define *root, char **variables_names);
 
 //funkcja pozwalajaca na inicjalizacje root
 bool init_define()
@@ -141,7 +141,7 @@ static _define *create_way_to_define(char *in)
 }
 
 //fukcja wywolywana w celu sprawdzenia, czy w danej linii wystepuja uzycia juz zdefiniowanych makrodyrektyw #define
-char* rewrite_define(char *in)///---
+char* expand_define(char *in)///---
 {
     char *line=malloc(sizeof(char)*10);
     if(line==NULL)
@@ -195,7 +195,7 @@ char* rewrite_define(char *in)///---
                     return NULL;
                 }
 
-                char *expanded_define=rewrite_define_with_variables(element, variables_begin);
+                char *expanded_define=expand_define_with_variables(element, variables_begin);
                 for(char **variables=variables_begin; variables-variables_begin<element->variables_number; variables++)
                     free(*variables);
                 free(variables_begin);
@@ -269,7 +269,7 @@ bool add_define(char *line)
         return 1;
     }
 
-    char *new_line=rewrite_define(line);
+    char *new_line=expand_define(line);
     if(new_line==NULL)
     {
         error_malloc();
@@ -505,7 +505,7 @@ char** read_variables_values(char **line, int number, char *define_name)
             (*line)++;
         }
         *name='\0';
-        name=rewrite_define(*variables);
+        name=expand_define(*variables);
         if(name==NULL)
         {
             for(variables=variables_begin; variables-variables_begin<variables_number; variables++)
@@ -543,7 +543,7 @@ char** read_variables_values(char **line, int number, char *define_name)
     return variables_begin;
 }
 
-char* rewrite_define_with_variables(_define *element, char **variables_names)
+char* expand_define_with_variables(_define *element, char **variables_names)
 {
     char *line_begin=(char*)malloc(10*sizeof(char));
     if(line_begin==NULL)

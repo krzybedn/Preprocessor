@@ -14,6 +14,7 @@ char *open(FILE **in, FILE **out)///---
     size_t lenmax=10, len=lenmax;
     int c,e;
     char *name_begin=name;
+    //wczytywanie w ten sposob umozliwia nam obsluge sciezek ujetych w " lub '
     while((c=getc(stdin))!=EOF && c<=' ');
     if(c=='"' || c=='\'')
     {
@@ -90,7 +91,7 @@ void close(FILE *in, FILE *out)
 }
 
 //glowna funkcja
-bool start()///---
+bool start()
 {
     FILE *in, *out;
     char *address;
@@ -131,7 +132,7 @@ bool start()///---
         close(in, out);
         return 1;
     }
-    bool res=rewrite(in, out);
+    bool res=expand(in, out);
     //niezaleznie od wyniku, wszystkie zmienne zdefiniowane w tej funckji byly poprawne, wiec nalezy je normalnie zwolnic przed wyjsciem z niej
 
     free(name);
@@ -143,7 +144,7 @@ bool start()///---
 }
 
 //glowna funkcja oslugujaca przepisanie calego pliku i wywolujaca pozostale funkcje
-bool rewrite(FILE *in, FILE *out)
+bool expand(FILE *in, FILE *out)
 {
     char *line;
     bool multiline_comment=0;
@@ -172,7 +173,7 @@ bool rewrite(FILE *in, FILE *out)
             }
             if(compare(type, "include"))
             {
-                if(rewrite_include(line, out))
+                if(expand_include(line, out))
                 {
                     free(type);
                     free(line_begin);
@@ -192,7 +193,7 @@ bool rewrite(FILE *in, FILE *out)
                 }
                 else
                 {
-                    line=rewrite_define(line);
+                    line=expand_define(line);
                     free(line_begin);
                     if(line==NULL)
                     {
@@ -208,7 +209,7 @@ bool rewrite(FILE *in, FILE *out)
         }
         else
         {
-            line=rewrite_define(line);
+            line=expand_define(line);
             free(line_begin);
             if(line==NULL)
             {

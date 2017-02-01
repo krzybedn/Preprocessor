@@ -1,6 +1,4 @@
 #include "preprocesor.h"
-#include <string.h>
-#include <omp.h>
 /*#define cos (asd, def) (asd+def)
 #define CHAR_MIN (15)
 #include <limits.h>*

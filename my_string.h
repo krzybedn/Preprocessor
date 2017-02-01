@@ -1,7 +1,6 @@
 #ifndef MY_STRING_H_INCLUDED
 #define MY_STRING_H_INCLUDED
 
-#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>

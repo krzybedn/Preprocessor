@@ -16,7 +16,7 @@
 char *open(FILE **in, FILE **out);
 void close(FILE *in, FILE *out);
 bool start();
-bool rewrite(FILE *in, FILE *out);
+bool expand(FILE *in, FILE *out);
 
 
 #endif // PREPROCESOR_H_INCLUDED

@@ -13,12 +13,12 @@ typedef struct _include
     bool exist;
 }_include;
 
-extern bool rewrite(FILE *in, FILE *out);
+extern bool expand(FILE *in, FILE *out);
 
 
 bool init_include(char *address);
 void destroy_include();
-bool rewrite_include(char *in, FILE *out);
+bool expand_include(char *in, FILE *out);
 bool add_include(char *name);
 
 #endif // INCLUDE_H_INCLUDED

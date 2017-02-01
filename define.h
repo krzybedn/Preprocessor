@@ -25,7 +25,7 @@ typedef struct _define
 
 bool init_define();
 void destroy_define();
-char* rewrite_define(char *in);
+char* expand_define(char *in);
 bool add_define(char *line);
 
 #endif // DEFINE_H_INCLUDED

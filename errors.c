@@ -50,11 +50,6 @@ void error_endless_string(const char *name)
     fprintf(stderr, "ERROR!!! I couldn't find end of string: %s\n", name);
 }
 
-void error()///-----------------
-{
-    fprintf(stderr, "ERROR!!! I don't know what exactly is working wrong, but I'm sure, that there is something wrong");
-}
-
 void error_define_not_enough_variables(const char *name)
 {
     fprintf(stderr, "ERRORR!!! I didn't get enough variables for: %s.", name);

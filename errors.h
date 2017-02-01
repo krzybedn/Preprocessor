@@ -17,9 +17,5 @@ void error_define_too_much_variables(const char *name);
 void waring_define_exist(const char *name);
 void warning_no_include(const char *name);
 
-void error();///------------
-
-
-
 
 #endif // ERRORS_H_INCLUDED
