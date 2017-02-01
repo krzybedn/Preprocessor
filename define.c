@@ -3,6 +3,7 @@
 static _define *root;
 
 static _define* alloc_define();
+static void destroy_single_define(_define *element);
 static void destroy_all_defines(_define *element);
 
 static _define *go_to_define(char *in);
@@ -48,8 +49,16 @@ static void destroy_all_defines(_define *element)
         return;
     for(int i=0; i<63; i++)
         destroy_all_defines(element->childs[i]);
+    destroy_single_define(element);
+    free(element);
+}
+
+//funkcja usuwajaca cala zawartosc _define
+static void destroy_single_define(_define *element)
+{
     if(element->exist)
     {
+        element->exist=0;
         if(element->value!=NULL)
             free(element->value);
         if(element->variables_positions!=NULL)
@@ -57,7 +66,6 @@ static void destroy_all_defines(_define *element)
         if(element->variables_occur!=NULL)
             free(element->variables_occur);
     }
-    free(element);
 }
 
 //funkcja wywolujaca destruktor na root
@@ -170,78 +178,61 @@ char* rewrite_define(char *in)///---
         {
             if(element->variables_exist)
             {
-                ;{
-                    /***if(*in!='(')
-                    {
-                        error_define_not_enough_variables(word);
-                        /*if(new_in!=NULL)
-                            free(new_in);
-                        free(line_begin);
-                        free(word);
-                        return NULL;
-                    }
-                    in++;
-                    //char *copy=new_in;
-                    char *new_in=rewrite_define(in, root_copy);
-                    /*if(copy!=NULL)
-                        free(copy);
-                    if(new_in==NULL)
-                    {
-                        /*if(new_in!=NULL)
-                            free(new_in);
-                        free(line_begin);
-                        free(word);
-                        return NULL;
-                    }
-                    //in=new_in;
-                    char **variables_begin=read_variables_values(&in, element->variables_number, word);
-                    if(variables_begin==NULL)
-                    {
-                        /*if(new_in!=NULL)
-                            free(new_in);
-                        free(word);
-                        free(line_begin);
-                        return NULL;
-                    }
-
-                    char *expanded_define=rewrite_define_with_variables(element, variables_begin);
-                    for(char **variables=variables_begin; variables-variables_begin<element->variables_number; variables++)
-                        free(*variables);
-                    free(variables_begin);
-                    if(expanded_define==NULL)
-                    {
-                        /*if(new_in!=NULL)
-                            free(new_in);
-                        free(word_begin);
-                        free(line_begin);
-                        return NULL;
-                    }
-                    *line='\0';
-                    char *new_line=concat(line_begin, expanded_define);
-                    if(new_line==NULL)
-                    {
-                        free(word);
-                        /*if(new_in!=NULL)
-                            free(new_in);
-                        free(line_begin);
-                        free(expanded_define);
-                        return NULL;
-                    }
+                if(*in!='(')
+                {
+                    error_define_not_enough_variables(word);
                     free(line_begin);
-                    line_begin=new_line;*/
+                    free(word);
+                    return NULL;
                 }
+                in++;
+
+                char **variables_begin=read_variables_values(&in, element->variables_number, word);
+                if(variables_begin==NULL)
+                {
+                    free(word);
+                    free(line_begin);
+                    return NULL;
+                }
+
+                char *expanded_define=rewrite_define_with_variables(element, variables_begin);
+                for(char **variables=variables_begin; variables-variables_begin<element->variables_number; variables++)
+                    free(*variables);
+                free(variables_begin);
+                if(expanded_define==NULL)
+                {
+                    free(word_begin);
+                    free(line_begin);
+                    return NULL;
+                }
+                *line='\0';
+                char *new_line=concat(line_begin, expanded_define);
+                if(new_line==NULL)
+                {
+                    free(word);
+                    free(line_begin);
+                    free(expanded_define);
+                    return NULL;
+                }
+                lenmax=string_length(new_line)+1;
+                len=1;
+                line=new_line+lenmax-1;
+                line_begin=new_line;
             }
             else
             {
-                for(int i=0; i<element->value_length; i++)
+                *line='\0';
+                char *new_line=concat(line_begin, element->value);
+                free(line_begin);
+                if(new_line==NULL)
                 {
-                    line_begin=add_char_to_string(&line, line_begin, &len, &lenmax, *(element->value+i));
-                    if(line_begin==NULL)
-                    {
-                        free(word_begin);
-                        return NULL;
-                    }
+                    free(word_begin);
+                    return NULL;
                 }
+                lenmax=string_length(new_line)+1;
+                len=1;
+                line=new_line+lenmax-1;
+                line_begin=new_line;
             }
         }
         else
@@ -279,6 +270,7 @@ bool add_define(char *line)
     }
 
     char *new_line=rewrite_define(line);
+    printf("---->%s\n",new_line);
     if(new_line==NULL)
     {
         error_malloc();
@@ -515,12 +507,21 @@ char** read_variables_values(char **line, int number, char *define_name)
             (*line)++;
         }
         *name='\0';
+        name=rewrite_define(*variables);
+        if(name==NULL)
+        {
+            for(variables=variables_begin; variables-variables_begin<variables_number; variables++)
+                free(*variables);
+            free(variables_begin);
+            return NULL;
+        }
+        *variables=name;
         variables++;
         if(**line==',')
             (*line)++;
         variables_number++;
     }
-    if(**line==EOF)
+    if(**line=='\0')
     {
         error_define_not_enough_variables(define_name);
         for(variables=variables_begin; variables-variables_begin<number; variables++)
@@ -593,3 +594,4 @@ char* rewrite_define_with_variables(_define *element, char **variables_names)
     *line='\0';
     return line_begin;
 }
+
