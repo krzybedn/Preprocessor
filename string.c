@@ -47,7 +47,7 @@ char *add_char_to_string(char **s, char *s_begin, size_t *len,  size_t *lenmax, 
 
 char *concat(const char *s1, const char *s2)
 {
-    char *result = (char*)malloc(strlen(s1)+strlen(s2)+10);
+    char *result=(char*)malloc(strlen(s1)+strlen(s2)+10);
 
     if(result==NULL)
     {
@@ -60,7 +60,7 @@ char *concat(const char *s1, const char *s2)
 
 char *getline(FILE *in)
 {
-    char *line=malloc(100);///-----?
+    char *line=malloc(100);
     if(line==NULL)
         return NULL;
     char *line_begin=line;

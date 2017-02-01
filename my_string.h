@@ -4,8 +4,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-
-typedef _Bool bool;
+#include <stdbool.h>
 
 int string_length(const char *s);
 bool is_letter(char c);

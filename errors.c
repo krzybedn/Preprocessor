@@ -1,4 +1,4 @@
-#include <stdio.h>
+#include "errors.h"
 
 void error_file_open(const char *name)
 {
