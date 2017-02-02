@@ -9,7 +9,7 @@ static void destroy_all_defines(_define *element);
 static _define *go_to_define(char *in);
 static _define *create_way_to_define(char *in);
 static char** read_variables_names(char **line, int *number);
-static bool add_variables_to_define(_define *root, char *line, char **variables_names);
+static bool add_value_to_define_with_variables(_define *root, char *line, char **variables_names);
 static char** read_variables_values(char **line, int number, char *define_name);
 static char* expand_define_with_variables(_define *root, char **variables_names);
 
@@ -37,7 +37,6 @@ static _define* alloc_define()
     for(int i=0; i<63; i++)
         new_define->childs[i]=NULL;
     new_define->exist=0;
-    new_define->variables_positions=NULL;
     new_define->variables_occur=NULL;
     return new_define;
 }
@@ -61,8 +60,6 @@ static void destroy_single_define(_define *element)
         element->exist=0;
         if(element->value!=NULL)
             free(element->value);
-        if(element->variables_positions!=NULL)
-            free(element->variables_positions);
         if(element->variables_occur!=NULL)
             free(element->variables_occur);
     }
@@ -180,6 +177,7 @@ char* expand_define(char *in)///---
             {
                 if(*in!='(')
                 {
+                    printf("%s %s\n", line, in);
                     error_define_not_enough_variables(word);
                     free(line_begin);
                     free(word);
@@ -255,13 +253,18 @@ char* expand_define(char *in)///---
     *line='\0';
     return line_begin;
 }
-
 //funkcja wywolywana po znaleznieniu dyrektywy #define w celu dodania nowej definicji do listy
-bool add_define(char *line)
+bool add_define(char *in)///+
 {
-    while(*line<=' ')
-        line++;
-    char *name=subword(&line), *name_begin=name;
+    while(*in<=' ')
+        in++;
+    char *name=subword(&in);
+    if(name==NULL)
+    {
+        error_malloc();
+        return 1;
+    }
+    char *name_begin=name;
     _define *element=create_way_to_define(name);
     if(element==NULL)
     {
@@ -269,131 +272,121 @@ bool add_define(char *line)
         return 1;
     }
 
-    char *new_line=expand_define(line);
-    if(new_line==NULL)
+    char *new_in=expand_define(in);
+    if(new_in==NULL)
     {
         error_malloc();
         free(name_begin);
         return 1;
     }
-    line=new_line;
+    in=new_in;
 
     if(element->exist)
         waring_define_exist(name_begin);
     element->exist=1;
-    if(*line=='(')
+    if(*in=='(')
     {
-        char **variables_begin;
-        variables_begin=read_variables_names(&line, &element->variables_number);
+        char **variables_begin=read_variables_names(&in, &element->variables_number);
         if(variables_begin==NULL)
         {
-            free(name_begin);
             error_malloc();
-            return 1;
-        }
-        if(line=='\0')
-        {
-            error_endless_name(name_begin);
+            free(new_in);
             free(name_begin);
             return 1;
         }
         element->variables_exist=1;
-        if(add_variables_to_define(element, line, variables_begin))
+        if(in=='\0')
         {
+            error_endless_string(name_begin);
+            free(new_in);
             free(name_begin);
+            return 1;
+        }
+        if(add_value_to_define_with_variables(element, in, variables_begin))
+        {
             error_malloc();
+            free(new_in);
+            free(name_begin);
             return 1;
         }
     }
     else
     {
-        element->variables_exist=0;
-        while(*line!='\0' && *line<=' ')
-            line++;
-        element->value=malloc(sizeof(char)*20);
-        if(element->value==NULL)
+        element->variables_exist=0;///osobna funkcja??
+        while(*in!='\0' && *in<=' ')
+            in++;
+        element->value="\0";
+        char *new_word=concat(element->value, in);
+        if(new_word==NULL)
         {
-            free(name_begin);
             error_malloc();
-            return 1;
+            free(new_in);
+            free(name_begin);
+            element->value=NULL;
+            return NULL;
         }
-        char *word=element->value;
-        size_t lenmax=20, len=lenmax;
-        while(*line!='\0')
-        {
-            element->value=add_char_to_string(&word, element->value, &len, &lenmax, *line++);
-            if(element->value==NULL)
-            {
-                free(name_begin);
-                error_malloc();
-                return 1;
-            }
-        }
-        element->value_length=lenmax-len;
+        element->value=new_word;
     }
-
+    free(new_in);
+    free(name_begin);
     return 0;
 }
 
-//funkcja ma za zadanie wczytac zmienne, tkore beda uzywane w danej definicji i zwraca tablice zawierajaca ich nazwy
-char** read_variables_names(char **line, int *number)
+//funkcja ma za zadanie wczytac zmienne, ktore beda uzywane w danej definicji, a nastepnie zwraca tablice zawierajaca ich nazwy
+char** read_variables_names(char **in, int *number)///+
 {
     char **variables_begin=malloc(10*sizeof(char*));
     if(variables_begin==NULL)
     {
         return NULL;
     }
-    size_t variables_max=10, variables_num=10;
+    size_t variables_max=10, variables_num=0;
     char **variables=variables_begin;
-    (*line)++;
-    while(**line!='\0' && **line!=')')
+    (*in)++;
+    while(**in!='\0' && **in<=' ')
+        (*in)++;
+    while(**in!='\0' && **in!=')')
     {
-        if(--variables_num==0)
+        if(++variables_num==variables_max)
         {
-            char **variables_new=realloc(variables_begin, variables_max*2);
+            char **variables_new=realloc(variables_begin, variables_max*=2);
             if(variables_new==NULL)
             {
-                for(char** i=variables_begin; i<variables_begin+variables_max-variables_num+1; i++)
-                    free(i);
+                for(char** variables=variables_begin; variables<variables_begin+variables_num-1; variables++)
+                    free(variables);
                 free(variables_begin);
                 return NULL;
             }
-            variables_max*=2;
-            variables=variables_new+(variables-variables_begin);
+            variables=variables_new+variables_num;
         }
-        *variables=subword(line);
+        *variables=subword(in);
         if(*variables==NULL)
         {
-            for(char** i=variables_begin; i<variables_begin+variables_max-variables_num; i++)
-                free(i);
+            for(char** variables=variables_begin; variables<variables_begin+variables_num-1; variables++)
+                free(variables);
             free(variables_begin);
             return NULL;
         }
         variables++;
-        while(**line!='\0' && **line<=' ')
-            (*line)++;
-        if(**line==',')
-            (*line)++;
-        while(**line!='\0' && **line<=' ')
-            (*line)++;
+        while(**in!='\0' && **in<=' ')
+            (*in)++;
+        if(**in==',')
+            (*in)++;
+        while(**in!='\0' && **in<=' ')
+            (*in)++;
     }
-    *number=variables_max-variables_num;
-    while(**line!='\0' && **line<=' ')
-        (*line)++;
-    (*line)++;
-    while(**line!='\0' && **line<=' ')
-        (*line)++;
+    *number=variables_num;
+    while(**in!='\0' && **in<=' ')
+        (*in)++;
+    (*in)++;
+    while(**in!='\0' && **in<=' ')
+        (*in)++;
     return variables_begin;
 }
 
 ///----
-bool add_variables_to_define(_define *element, char *line, char **variables_names)
+bool add_value_to_define_with_variables(_define *element, char *in, char **variables_names)///+
 {
-    element->variables_positions=(int*)malloc(10*sizeof(int*));
-    if(element->variables_positions==NULL)
-    {
-        return 1;
-    }
     element->variables_occur=(int*)malloc(10*sizeof(int));
     if(element->variables_occur==NULL)
     {
@@ -407,51 +400,40 @@ bool add_variables_to_define(_define *element, char *line, char **variables_name
     size_t len=10, lenmax=10;
     int variables_max=10;
     element->variables_occur_number=0;
-    char *word=element->value;
-    while(*line!='\0')
+    char *line=element->value;
+    while(*in!='\0')
     {
-        bool tmp=1;
-        while(!is_letter(*line))
+        while(!is_letter(*in))
         {
-            element->value=add_char_to_string(&word, element->value, &len, &lenmax, *line++);
+            element->value=add_char_to_string(&line, element->value, &len, &lenmax, *in++);
             if(element->value==NULL)
             {
                 return 1;
             }
         }
-        char *name=subword(&line);
+        char *name=subword(&in);
         if(name==NULL)
         {
             return 1;
         }
-        for(int i=0; tmp && i<element->variables_number; i++)
+        bool name_is_variable=0;
+        for(int i=0; !name_is_variable && i<element->variables_number; i++)
         {
             if(compare(name, *(variables_names+i)))
             {
                 if(element->variables_occur_number==variables_max)
                 {
-                    int *new_pos=(int*)realloc(element->variables_positions, variables_max*sizeof(int));
-                    if(new_pos==NULL)
-                    {
-                        free(element->variables_positions);
-                        return 1;
-                    }
-                    element->variables_positions=new_pos;
-
-                    int *new_occ=(int*)realloc(element->variables_occur, variables_max*sizeof(int));
+                    int *new_occ=(int*)realloc(element->variables_occur, (variables_max*=2)*sizeof(int));
                     if(new_occ==NULL)
                     {
-                        free(element->variables_occur);
                         return 1;
                     }
                     element->variables_occur=new_occ;
-                    variables_max*=2;
                 }
                 *(element->variables_occur+element->variables_occur_number)=i;
-                *(element->variables_positions+element->variables_occur_number)=len;
-                element->value=add_char_to_string(&word, element->value, &len, &lenmax, '\n');
+                element->value=add_char_to_string(&line, element->value, &len, &lenmax, '\n');
                 element->variables_occur_number++;
-                tmp=0;
+                name_is_variable=1;
                 //wiemy ze cala zawartosc defina ma jedna linijke, mozemy wiec wykorzystac zank '\n' jako znak zmiennej
                 if(element->value==NULL)
                 {
@@ -459,43 +441,43 @@ bool add_variables_to_define(_define *element, char *line, char **variables_name
                 }
             }
         }
-        if(tmp)
+        if(!name_is_variable)
         {
-            *word='\0';
-            char *new_word=concat(element->value, name);
-            if(new_word==NULL)
+            *line='\0';
+            char *new_line=concat(element->value, name);
+            if(new_line==NULL)
             {
                 return 1;
             }
-            word=new_word+string_length(new_word);
-            lenmax=string_length(new_word)+1;
+            line=new_line+string_length(new_line);
+            lenmax=string_length(new_line)+1;
             len=1;
             free(element->value);
-            element->value=new_word;
+            element->value=new_line;
         }
     }
-    element->value_length=len;
     return 0;
 }
 
-char** read_variables_values(char **line, int number, char *define_name)
+char** read_variables_values(char **in, int number, char *define_name)///+
 {
     char **variables_begin=malloc(number*sizeof(char*));
     if(variables_begin==NULL)
     {
+        error_malloc();
         return NULL;
     }
     char **variables=variables_begin;
     int variables_number=0;
-    while(**line!='\0' && variables_number<number && **line!=')')
+    while(**in!='\0' && variables_number<number && **in!=')')
     {
-        while(**line!='\0' && **line<=' ')
-            (*line)++;
+        while(**in!='\0' && **in<=' ')
+            (*in)++;
         *variables=(char*)malloc(10*sizeof(char));
         if(*variables==NULL)
         {
             error_malloc();
-            for(variables=variables_begin; variables-variables_begin<variables_number-1; variables++)
+            for(variables=variables_begin; variables<variables_begin+variables_number-1; variables++)
                 free(*variables);
             free(variables_begin);
             return NULL;
@@ -503,63 +485,64 @@ char** read_variables_values(char **line, int number, char *define_name)
         int brackets=0;
         char *name=*(variables);
         size_t len=10, len_max=10;
-        while(**line!='\0' && !(brackets==0 && (**line==')' || **line==',' )))
+        while(**in!='\0' && !(brackets==0 && (**in==')' || **in==',' )))
         {
-            if(**line=='(')
+            if(**in=='(')
                 brackets++;
-            else if(**line==')')
+            else if(**in==')')
                 brackets--;
-            *variables=add_char_to_string(&name, *variables, &len, &len_max, **line);
+            *variables=add_char_to_string(&name, *variables, &len, &len_max, **in);
             if(*variables==NULL)
             {
                 error_malloc();
-                for(variables=variables_begin; variables-variables_begin<variables_number-1; variables++)
+                for(variables=variables_begin; variables<variables_begin+variables_number-1; variables++)
                     free(*variables);
                 free(variables_begin);
                 return NULL;
             }
-            (*line)++;
+            (*in)++;
         }
         *name='\0';
         name=expand_define(*variables);
         if(name==NULL)
         {
-            for(variables=variables_begin; variables-variables_begin<variables_number; variables++)
+            error_malloc();
+            for(variables=variables_begin; variables<variables_begin+variables_number; variables++)
                 free(*variables);
             free(variables_begin);
             return NULL;
         }
         *variables=name;
         variables++;
-        if(**line==',')
-            (*line)++;
         variables_number++;
+        if(**in==',')
+            (*in)++;
     }
-    if(**line=='\0')
+    if(**in=='\0')
     {
         error_define_not_enough_variables(define_name);
-        for(variables=variables_begin; variables-variables_begin<number; variables++)
+        for(variables=variables_begin; variables<variables_begin+variables_number; variables++)
             free(*variables);
-        free(variables);
+        free(variables_begin);
         return NULL;
     }
-    if(**line==')' && variables_number!=number)
+    if(**in==')' && variables_number!=number)
     {
         if(variables_number<number)
             error_define_not_enough_variables(define_name);
         else
             error_define_too_much_variables(define_name);
-        for(variables=variables_begin; variables-variables_begin<number; variables++)
+        for(variables=variables_begin; variables<variables_begin+variables_number; variables++)
             free(*variables);
-        free(variables);
+        free(variables_begin);
         return NULL;
     }
-    (*line)++;
+    (*in)++;
 
     return variables_begin;
 }
 
-char* expand_define_with_variables(_define *element, char **variables_names)
+char* expand_define_with_variables(_define *element, char **variables_names)///+
 {
     char *line_begin=(char*)malloc(10*sizeof(char));
     if(line_begin==NULL)
@@ -576,20 +559,17 @@ char* expand_define_with_variables(_define *element, char **variables_names)
         if(*in=='\n')
         {
             char *variable=*(variables_names+*(element->variables_occur+variables_number));
-            int var_len=string_length(variable);
             *line='\0';
             char *new_line=concat(line_begin, variable);
+            free(line_begin);
             if(new_line==NULL)
             {
                 error_malloc();
-                free(line_begin);
                 return NULL;
             }
-            line=new_line+(line-line_begin)+var_len;
-            *line='s';
+            line=new_line+string_length(new_line);
             len_max=string_length(new_line)+1;
             len=1;
-            free(line_begin);
             line_begin=new_line;
             variables_number++;
         }

@@ -1,10 +1,68 @@
 #include "preprocesor.h"
 
+static FILE *output_file;
+
+static char *open(FILE **input_file);
+static void close(FILE *input_file);
+
+//glowna funkcja
+bool start()
+{
+    FILE *input_file;
+    char *address;
+    if((address=open(&input_file))==NULL)
+    {
+        close(input_file);
+        return 1;
+    }
+    char *name=address;
+    if((address=split_by_last_slash(&name))==NULL)
+    {
+        error_malloc();
+        free(name);
+        close(input_file);
+        return 1;
+    }
+    if(init_define())
+    {
+        free(name);
+        free(address);
+        close(input_file);
+        return 1;
+    }
+    if(init_include(address))
+    {
+        free(name);
+        free(address);
+        destroy_define();
+        close(input_file);
+        return 1;
+    }
+    if(add_include(name))
+    {
+        free(name);
+        free(address);
+        destroy_include();
+        destroy_define();
+        close(input_file);
+        return 1;
+    }
+    bool res=expand(input_file);
+    //niezaleznie od wyniku, wszystkie zmienne zdefiniowane w tej funckji byly poprawne, wiec nalezy je normalnie zwolnic przed wyjsciem z niej
+
+    free(name);
+    free(address);
+    destroy_define();
+    destroy_include();
+    close(input_file);
+    return res;
+}
+
 //fukcja otwierajaca plik wejsciowy i wyjsciowy
-char *open(FILE **in, FILE **out)///---
+static char *open(FILE **input_file)///---
 {
     ///printf("Podaj adres pliku wejsciowego: ");
-    *in=*out=NULL;
+    *input_file=output_file=NULL;
     char *name=malloc(sizeof(char)*10);
     if(name==NULL)
     {
@@ -35,8 +93,8 @@ char *open(FILE **in, FILE **out)///---
         }
     }
     *name='\0';
-    *in=fopen(name_begin, "r");
-    if(*in==NULL)
+    *input_file=fopen(name_begin, "r");
+    if(*input_file==NULL)
     {
         error_file_open(name_begin);
         return NULL;
@@ -71,8 +129,8 @@ char *open(FILE **in, FILE **out)///---
         }
     }
     *name='\0';
-    *out=fopen(name_begin, "w");
-    if(*out==NULL)
+    output_file=fopen(name_begin, "w");
+    if(output_file==NULL)
     {
         error_file_open(name_begin);
         return NULL;
@@ -82,73 +140,20 @@ char *open(FILE **in, FILE **out)///---
 }
 
 //fukcja zamykajaca plik wejsciowy i wyjsciowy
-void close(FILE *in, FILE *out)
+static void close(FILE *input_file)
 {
-    if(in!=NULL)
-        fclose(in);
-    if(out!=NULL)
-        fclose(out);
-}
-
-//glowna funkcja
-bool start()
-{
-    FILE *in, *out;
-    char *address;
-    if((address=open(&in, &out))==NULL)
-    {
-        close(in, out);
-        return 1;
-    }
-    char *name=address;
-    if((address=split_by_last_slash(&name))==NULL)
-    {
-        error_malloc();
-        free(name);
-        close(in, out);
-        return 1;
-    }
-    if(init_define())
-    {
-        free(name);
-        free(address);
-        close(in, out);
-        return 1;
-    }
-    if(init_include(address))
-    {
-        free(name);
-        free(address);
-        destroy_define();
-        close(in, out);
-        return 1;
-    }
-    if(add_include(name))
-    {
-        free(name);
-        free(address);
-        destroy_include();
-        destroy_define();
-        close(in, out);
-        return 1;
-    }
-    bool res=expand(in, out);
-    //niezaleznie od wyniku, wszystkie zmienne zdefiniowane w tej funckji byly poprawne, wiec nalezy je normalnie zwolnic przed wyjsciem z niej
-
-    free(name);
-    free(address);
-    destroy_define();
-    destroy_include();
-    close(in, out);
-    return res;
+    if(input_file!=NULL)
+        fclose(input_file);
+    if(output_file!=NULL)
+        fclose(output_file);
 }
 
 //glowna funkcja oslugujaca przepisanie calego pliku i wywolujaca pozostale funkcje
-bool expand(FILE *in, FILE *out)
+bool expand(FILE *input_file)
 {
     char *line;
     bool multiline_comment=0;
-    while((line=get_line(in))!=NULL && *line!='\0')
+    while((line=get_line(input_file))!=NULL && *line!='\0')
     {
         char *line_begin=delete_comments(line, &multiline_comment);
         if(line_begin==NULL)
@@ -173,7 +178,7 @@ bool expand(FILE *in, FILE *out)
             }
             if(compare(type, "include"))
             {
-                if(expand_include(line, out))
+                if(expand_include(line))
                 {
                     free(type);
                     free(line_begin);
@@ -202,7 +207,7 @@ bool expand(FILE *in, FILE *out)
                         return 1;
                     }
                     line_begin=line;
-                    fprintf(out, "#%s %s\n",type, line);
+                    fprintf(output_file, "#%s %s\n",type, line);
                 }
             }
             free(type);
@@ -217,9 +222,9 @@ bool expand(FILE *in, FILE *out)
                 return 1;
             }
             line_begin=line;
-            fprintf(out, "%s",line);
+            fprintf(output_file, "%s",line);
             if(*line!='\n' && *line!='\0')//Dzieki takim zabiegom nie pomijamy linii pustych
-                fprintf(out, "\n");
+                fprintf(output_file, "\n");
         }
         free(line_begin);
     }

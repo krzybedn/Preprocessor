@@ -12,13 +12,11 @@ typedef struct _define
     struct _define *childs[63];
     bool exist;
     char *value;
-    int value_length;
 
     bool variables_exist;
     int variables_number;
     /******************************/
     int variables_occur_number;//liczba wystapien zmiennych na roznych pozycjach
-    int *variables_positions;//pozycje, na ktorych pojawi sie jakas zmienna
     int *variables_occur;//jaka zamienna wystepuje na danej pozycji
 }_define;
 

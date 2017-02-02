@@ -51,7 +51,7 @@ static void destroy_all_includes(_include *element)
 }
 
 //fukcja wywolywana po znalezieniu dyrektywy #include i pozwalajaca otworzyc odpowiedni plik naglowkowy i go przepisac
-bool expand_include(char *in, FILE *out)
+bool expand_include(char *in)
 {
     while(*in<=' ')
         in++;
@@ -149,7 +149,7 @@ bool expand_include(char *in, FILE *out)
         free(adress_begin);
     }
 
-    bool res=expand(header, out);
+    bool res=expand(header);
     fclose(header);
     return res;
 }

@@ -37,7 +37,7 @@ void error_empty_include_name()
 
 void waring_define_exist(const char *name)
 {
-    fprintf(stderr, "WARNING! Define redefinition: %s\n", name);
+    fprintf(stderr, "WARNING! Define redefinition: %s.\n", name);
 }
 
 void warning_no_include(const char *name)
@@ -47,15 +47,15 @@ void warning_no_include(const char *name)
 
 void error_endless_string(const char *name)
 {
-    fprintf(stderr, "ERROR!!! I couldn't find end of string: %s\n", name);
+    fprintf(stderr, "ERROR!!! I couldn't find end of string: %s.\n", name);
 }
 
 void error_define_not_enough_variables(const char *name)
 {
-    fprintf(stderr, "ERRORR!!! I didn't get enough variables for: %s\n.", name);
+    fprintf(stderr, "ERRORR!!! I didn't get enough variables for: %s.\n", name);
 }
 
 void error_define_too_much_variables(const char *name)
 {
-    fprintf(stderr, "ERRORR!!! I got too much variables for: %s\n.", name);
+    fprintf(stderr, "ERRORR!!! I got too much variables for: %s.\n", name);
 }

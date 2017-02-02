@@ -9,14 +9,8 @@
 #include "include.h"
 #include "errors.h"
 
-
-
-
-//funkcje ogolne
-char *open(FILE **in, FILE **out);
-void close(FILE *in, FILE *out);
 bool start();
-bool expand(FILE *in, FILE *out);
+bool expand(FILE *input_file);
 
 
 #endif // PREPROCESOR_H_INCLUDED
