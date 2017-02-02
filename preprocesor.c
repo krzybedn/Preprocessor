@@ -148,7 +148,7 @@ bool expand(FILE *in, FILE *out)
 {
     char *line;
     bool multiline_comment=0;
-    while((line=getline(in))!=NULL && *line!='\0')
+    while((line=get_line(in))!=NULL && *line!='\0')
     {
         char *line_begin=delete_comments(line, &multiline_comment);
         if(line_begin==NULL)

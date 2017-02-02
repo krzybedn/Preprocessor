@@ -410,6 +410,7 @@ bool add_variables_to_define(_define *element, char *line, char **variables_name
     char *word=element->value;
     while(*line!='\0')
     {
+        bool tmp=1;
         while(!is_letter(*line))
         {
             element->value=add_char_to_string(&word, element->value, &len, &lenmax, *line++);
@@ -423,7 +424,7 @@ bool add_variables_to_define(_define *element, char *line, char **variables_name
         {
             return 1;
         }
-        for(int i=0; i<element->variables_number; i++)
+        for(int i=0; tmp && i<element->variables_number; i++)
         {
             if(compare(name, *(variables_names+i)))
             {
@@ -450,12 +451,27 @@ bool add_variables_to_define(_define *element, char *line, char **variables_name
                 *(element->variables_positions+element->variables_occur_number)=len;
                 element->value=add_char_to_string(&word, element->value, &len, &lenmax, '\n');
                 element->variables_occur_number++;
+                tmp=0;
                 //wiemy ze cala zawartosc defina ma jedna linijke, mozemy wiec wykorzystac zank '\n' jako znak zmiennej
                 if(element->value==NULL)
                 {
                     return 1;
                 }
             }
+        }
+        if(tmp)
+        {
+            *word='\0';
+            char *new_word=concat(element->value, name);
+            if(new_word==NULL)
+            {
+                return 1;
+            }
+            word=new_word+string_length(new_word);
+            lenmax=string_length(new_word)+1;
+            len=1;
+            free(element->value);
+            element->value=new_word;
         }
     }
     element->value_length=len;

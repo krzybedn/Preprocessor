@@ -127,7 +127,7 @@ bool expand_include(char *in, FILE *out)
 
         do
         {
-            char *include_adress=getline(includes);
+            char *include_adress=get_line(includes);
             if(*include_adress=='\0')
             {
                 warning_no_include(adress_begin);

@@ -57,7 +57,7 @@ char *concat(const char *s1, const char *s2)
     return result;
 }
 
-char *getline(FILE *in)
+char *get_line(FILE *in)
 {
     char *line=malloc(100);
     if(line==NULL)

@@ -27,7 +27,7 @@ void error_unknown_directive(const char *name)
 
 void error_include(const char *name)
 {
-    fprintf(stderr, "ERROR!!! I couldn't find header: .\n", name);
+    fprintf(stderr, "ERROR!!! I couldn't find header: %s.\n", name);
 }
 
 void error_empty_include_name()
@@ -42,7 +42,7 @@ void waring_define_exist(const char *name)
 
 void warning_no_include(const char *name)
 {
-    fprintf(stderr, "WARNING! I couldn't find include file: %s. Check did you add all possible paths %s.\n", name);
+    fprintf(stderr, "WARNING! I couldn't find include file: %s. Check did you add all possible paths.\n", name);
 }
 
 void error_endless_string(const char *name)
@@ -52,10 +52,10 @@ void error_endless_string(const char *name)
 
 void error_define_not_enough_variables(const char *name)
 {
-    fprintf(stderr, "ERRORR!!! I didn't get enough variables for: %s.", name);
+    fprintf(stderr, "ERRORR!!! I didn't get enough variables for: %s\n.", name);
 }
 
 void error_define_too_much_variables(const char *name)
 {
-    fprintf(stderr, "ERRORR!!! I got too much variables for: %s.", name);
+    fprintf(stderr, "ERRORR!!! I got too much variables for: %s\n.", name);
 }
