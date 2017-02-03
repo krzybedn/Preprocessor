@@ -5,7 +5,6 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include "my_string.h"
-#include "errors.h"
 
 typedef struct _include
 {
@@ -20,5 +19,14 @@ bool init_include(const char *address);
 void destroy_include();
 bool process_include(const char *in);
 bool add_include(const char *name);
+
+
+extern void error_malloc();
+extern void error_file_open(const char *name);
+extern void error_endless_name(const char *name);
+
+extern void error_include_type(char type);
+extern void error_empty_include_name();
+extern void warning_no_include(const char *name);
 
 #endif // INCLUDE_H_INCLUDED

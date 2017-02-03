@@ -277,7 +277,7 @@ bool add_define(char *in)
     in=new_in;
 
     if(element->exist)
-        waring_define_exist(name_begin);
+        warning_define_exist(name_begin);
     element->exist=1;
     if(*in=='(')
     {

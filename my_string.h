@@ -18,5 +18,4 @@ bool compare(const char *s1, const char *s2);
 char *split_by_last_slash(char **address);
 char *delete_comments(char *in, bool *multiline_comment);
 
-
 #endif // MY_STRING_H_INCLUDED

@@ -1,4 +1,4 @@
-#include "errors.h"
+#include <stdio.h>
 
 void error_file_open(const char *name)
 {
@@ -15,17 +15,12 @@ void error_malloc()
     fprintf(stderr, "ERROR!!! I couldn't alloc enough memory.\n");
 }
 
-void error_include(const char *name)
-{
-    fprintf(stderr, "ERROR!!! I couldn't find header: %s.\n", name);
-}
-
 void error_empty_include_name()
 {
-    fprintf(stderr, "ERROR!!! There apeard empty include name!\n");
+    fprintf(stderr, "ERROR!!! There appeared empty include name!\n");
 }
 
-void waring_define_exist(const char *name)
+void warning_define_exist(const char *name)
 {
     fprintf(stderr, "WARNING! Define redefinition: %s.\n", name);
 }

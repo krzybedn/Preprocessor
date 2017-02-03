@@ -7,9 +7,10 @@
 #include "my_string.h"
 #include "define.h"
 #include "include.h"
-#include "errors.h"
 
 bool process(FILE *input_file);
 
+extern void error_malloc();
+extern void error_file_open(const char *name);
 
 #endif // PREPROCESOR_H_INCLUDED
