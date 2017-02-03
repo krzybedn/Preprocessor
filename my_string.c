@@ -134,12 +134,11 @@ char *subword(char **s)
 char *split_by_last_slash(char **address)
 {
     char *address_begin=*address;
-    int i=0, last=-1;
-    while(*(address_begin+i)!='\0')
+    int i, last=-1;
+    for(i=0; *(address_begin+i)!='\0'; i++)
     {
         if(*(address_begin+i)=='\\' || *(address_begin+i)=='/')
             last=i;
-        i++;
     }
     if(last==-1)
     {
@@ -147,20 +146,21 @@ char *split_by_last_slash(char **address)
         *tmp='\0';
         return tmp;
     }
-    *address=substring(address_begin, last+1, i-last-1);
-    if(*address==NULL)
+    char *cos=substring(address_begin, last+1, i-last);
+    if(cos==NULL)
     {
         *address=address_begin;
         return NULL;
     }
-    char *new_address=(char*)realloc(address_begin, (last+1)*sizeof(char));
+    *address=cos;
+    char *new_address=(char*)realloc(address_begin, (last+2)*sizeof(char));
     if(new_address==NULL)
     {
         free(address_begin);
         return NULL;
     }
-    *(new_address+last+1)='\0';
-    return new_address;
+    *(address_begin+last+1)='\0';
+    return address_begin;
 }
 
 char *delete_comments(char *in, bool *multiline_comment)

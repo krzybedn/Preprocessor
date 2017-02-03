@@ -1,15 +1,22 @@
 #include "include.h"
 
 static _include *root;
-static char *source;
+static const char *source;
 
 
 static _include* alloc_include();
 static void destroy_all_includes(_include *element);
-static bool exist_incude(char *name);
+static bool exist_incude(const char *name);
+static FILE *includes;
 
-bool init_include(char *address)
+bool init_include(const char *address)
 {
+    includes=fopen("include.txt", "r");
+    if(includes == NULL)
+    {
+        error_file_open("include.txt");
+        return 1;
+    }
     source=address;
     if(root!=NULL)
         destroy_include();
@@ -37,6 +44,7 @@ static _include* alloc_include()
 
 void destroy_include()
 {
+    fclose(includes);
     destroy_all_includes(root);
 }
 
@@ -51,7 +59,7 @@ static void destroy_all_includes(_include *element)
 }
 
 //fukcja wywolywana po znalezieniu dyrektywy #include i pozwalajaca otworzyc odpowiedni plik naglowkowy i go przepisac
-bool expand_include(char *in)
+bool expand_include(const char *in)
 {
     while(*in<=' ')
         in++;
@@ -61,11 +69,20 @@ bool expand_include(char *in)
         return 1;
     }
 
-    char *adress_begin;
-    FILE *header;
-    char end=*in;
-    if(end=='<')
+    char end;
+    if(*in=='<')
+    {
         end='>';
+    }
+    else if(*in=='"')
+    {
+        end='"';
+    }
+    else
+    {
+        error_include_type(*in);
+        return 1;
+    }
     in++;
     char *adress=malloc(sizeof(char)*10);
     if(adress==NULL)
@@ -73,34 +90,37 @@ bool expand_include(char *in)
         error_malloc();
         return 1;
     }
-    adress_begin=adress;
+    char *address_begin=adress;
+    FILE *header;
     size_t len=10, lenmax=len;
     while(*in!='\0' && *in!=end)
     {
-        adress_begin=add_char_to_string(&adress, adress_begin, &len, &lenmax, *in++);
-        if(adress_begin==NULL)
+        char *new_adress=add_char_to_string(&adress, address_begin, &len, &lenmax, *in++);
+        if(address_begin==NULL)
         {
             error_malloc();
-            free(adress_begin);
+            free(address_begin);
             return NULL;
         }
+        address_begin=new_adress;
     }
     if(*in=='\0')
     {
-        error_endless_name(adress_begin);
+        error_endless_name(address_begin);
         return 1;
     }
     *adress='\0';
-    if(exist_incude(adress_begin))
+    if(exist_incude(address_begin))
     {
-        free(adress_begin);
+        free(address_begin);
         return 0;
     }
-    add_include(adress_begin);
+    add_include(address_begin);
 
     if(end=='"')
     {
-        char *full_address=concat(source, adress_begin);
+        char *full_address=concat(source, address_begin);
+        free(address_begin);
         if(full_address==NULL)
         {
             error_malloc();
@@ -110,7 +130,7 @@ bool expand_include(char *in)
         if(header == NULL)
         {
             free(full_address);
-            warning_no_include(adress_begin);
+            warning_no_include(address_begin);
             return 0;
         }
         free(full_address);
@@ -118,22 +138,17 @@ bool expand_include(char *in)
     else if(*in=='>')
     {
         bool tmp=1;
-        FILE *includes=fopen("include.txt", "r");
-        if(includes == NULL)
-        {
-            error_file_open("include.txt");
-            return 1;
-        }
-
         do
         {
             char *include_adress=get_line(includes);
             if(*include_adress=='\0')
             {
-                warning_no_include(adress_begin);
+                warning_no_include(address_begin);
+                free(address_begin);
+                fclose(includes);
                 return 0;
             }
-            char *full_address=concat(include_adress, adress_begin);
+            char *full_address=concat(include_adress, address_begin);
             free(include_adress);
 
             if(full_address!=NULL)
@@ -146,7 +161,8 @@ bool expand_include(char *in)
             }
             free(full_address);
         }while(tmp);
-        free(adress_begin);
+        rewind(includes);
+        free(address_begin);
     }
 
     bool res=expand(header);
@@ -156,7 +172,7 @@ bool expand_include(char *in)
 
 
 //funkcja sprawdza czy dany plik naglowkowy zostal juz dodany
-static bool exist_incude(char *name)
+static bool exist_incude(const char *name)
 {
     _include *element=root;
     while(element!=NULL && *name!='\0')
@@ -169,21 +185,20 @@ static bool exist_incude(char *name)
 }
 
 //funkcja dodaje nowy plik naglowkowy do listy plikow, ktore juz wystapily
-bool add_include(char *name)
+bool add_include(const char *name)
 {
     _include *element=root;
     while(*name!='\0')
     {
-        if(element->childs[(int)*name]==NULL)
+        if(element->childs[(int)(*name)]==NULL)
         {
-            element->childs[(int)*name]=alloc_include();
-            if(element->childs[(int)*name]==NULL)
+            if((element->childs[(int)(*name)]=alloc_include())==NULL)
             {
                 error_malloc();
                 return 1;
             }
         }
-        element=element->childs[(int)*name];
+        element=element->childs[(int)(*name)];
         name++;
     }
     element->exist=1;

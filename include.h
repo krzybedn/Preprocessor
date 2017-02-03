@@ -16,9 +16,9 @@ typedef struct _include
 extern bool expand(FILE *input_file);
 
 
-bool init_include(char *address);
+bool init_include(const char *address);
 void destroy_include();
-bool expand_include(char *in);
-bool add_include(char *name);
+bool expand_include(const char *in);
+bool add_include(const char *name);
 
 #endif // INCLUDE_H_INCLUDED

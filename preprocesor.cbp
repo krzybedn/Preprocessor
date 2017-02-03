@@ -46,14 +46,14 @@
 		<Unit filename="main.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="my_string.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Unit filename="my_string.h" />
 		<Unit filename="preprocesor.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="preprocesor.h" />
-		<Unit filename="string.c">
-			<Option compilerVar="CC" />
-		</Unit>
 		<Extensions>
 			<code_completion />
 			<envvars />

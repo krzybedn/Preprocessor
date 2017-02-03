@@ -5,11 +5,6 @@ void error_file_open(const char *name)
     fprintf(stderr, "ERROR!!! I couldn't open file: %s.\n", name);
 }
 
-void error_long_name(const char *name)
-{
-    fprintf(stderr, "ERROR!!! To long file name: %s.\n", name);
-}
-
 void error_endless_name(const char *name)
 {
     fprintf(stderr, "ERROR!!! I couldn't find end of file name: %s.\n", name);
@@ -18,11 +13,6 @@ void error_endless_name(const char *name)
 void error_malloc()
 {
     fprintf(stderr, "ERROR!!! I couldn't alloc enough memory.\n");
-}
-
-void error_unknown_directive(const char *name)
-{
-    fprintf(stderr, "ERROR!!! Unknown directive type: %s.\n", name);
 }
 
 void error_include(const char *name)
@@ -58,4 +48,9 @@ void error_define_not_enough_variables(const char *name)
 void error_define_too_much_variables(const char *name)
 {
     fprintf(stderr, "ERRORR!!! I got too much variables for: %s.\n", name);
+}
+
+void error_include_type(char type)
+{
+    printf("ERROR!!! I don't know that type of include '%c'.\n", type);
 }

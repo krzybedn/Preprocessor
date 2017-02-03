@@ -47,10 +47,10 @@ bool start()
         close(input_file);
         return 1;
     }
+    free(name);
     bool res=expand(input_file);
     //niezaleznie od wyniku, wszystkie zmienne zdefiniowane w tej funckji byly poprawne, wiec nalezy je normalnie zwolnic przed wyjsciem z niej
 
-    free(name);
     free(address);
     destroy_define();
     destroy_include();
@@ -155,6 +155,8 @@ bool expand(FILE *input_file)
     bool multiline_comment=0;
     while((line=get_line(input_file))!=NULL && *line!='\0')
     {
+        if(compare(line, "_CRTIMP int __mingw_stdio_redirect__(fprintf)(FILE*, const char*, ...);"))
+            printf("___________\n");
         char *line_begin=delete_comments(line, &multiline_comment);
         if(line_begin==NULL)
         {
@@ -178,6 +180,7 @@ bool expand(FILE *input_file)
             }
             if(compare(type, "include"))
             {
+                ///printf("include\n");
                 if(expand_include(line))
                 {
                     free(type);
@@ -189,6 +192,7 @@ bool expand(FILE *input_file)
             {
                 if(compare(type, "define"))
                 {
+                ///printf("define %s\n", line);
                     if(add_define(line))
                     {
                         free(type);
@@ -196,8 +200,14 @@ bool expand(FILE *input_file)
                         return 1;
                     }
                 }
+                else if(compare(type, "undef"))
+                {
+                ///printf("undef %s\n", line);
+                    fprintf(output_file, "#%s %s\n",type, line);
+                }
                 else
                 {
+               /// printf("inne %s\n", line);
                     line=expand_define(line);
                     free(line_begin);
                     if(line==NULL)
@@ -214,6 +224,7 @@ bool expand(FILE *input_file)
         }
         else
         {
+               /// printf("ogolne %s\n", line);
             line=expand_define(line);
             free(line_begin);
             if(line==NULL)
