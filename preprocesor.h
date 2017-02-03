@@ -9,7 +9,6 @@
 #include "include.h"
 #include "errors.h"
 
-bool start();
 bool expand(FILE *input_file);
 
 

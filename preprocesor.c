@@ -6,7 +6,7 @@ static char *open(FILE **input_file);
 static void close(FILE *input_file);
 
 //glowna funkcja
-bool start()
+int main()
 {
     FILE *input_file;
     char *address;
