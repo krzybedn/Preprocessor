@@ -3,10 +3,10 @@ CFLAGS = -std=c99 -Wall -Wextra -Werror
 LFLAGS = -lm
 NAME = preprocesor.exe
 
-SRC = preprocesor.c my_string.c errors.c main.c define.c include.c
+SRC = preprocesor.c my_string.c errors.c define.c include.c
 DEPS = preprocesor.h my_string.h errors.h define.h include.h
 
-OBJS = preprocesor.o my_string.o errors.o main.o define.o include.o
+OBJS = preprocesor.o my_string.o errors.o define.o include.o
 
 YOU : $(SRC) $(NAME)
 
@@ -27,9 +27,6 @@ errors.o: errors.c errors.h
 
 my_string.o: my_string.c my_string.h 
 	$(CC) -c $(CFLAGS) my_string.c -o my_string.o
-
-main.o: main.c
-	$(CC) -c $(CFLAGS) main.c -o main.o
 	
 clean:
 	rm -f $(OBJS) $(NAME)
