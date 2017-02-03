@@ -9,7 +9,7 @@
 #include "include.h"
 #include "errors.h"
 
-bool expand(FILE *input_file);
+bool process(FILE *input_file);
 
 
 #endif // PREPROCESOR_H_INCLUDED

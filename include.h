@@ -13,12 +13,12 @@ typedef struct _include
     bool exist;
 }_include;
 
-extern bool expand(FILE *input_file);
+extern bool process(FILE *input_file);
 
 
 bool init_include(const char *address);
 void destroy_include();
-bool expand_include(const char *in);
+bool process_include(const char *in);
 bool add_include(const char *name);
 
 #endif // INCLUDE_H_INCLUDED

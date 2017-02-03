@@ -11,9 +11,9 @@ static _define *create_way_to_define(const char *in);
 static char** read_variables_names(char **line, int *number);
 static bool add_value_to_define_with_variables(_define *root, char *line, char **variables_names);
 static char** read_variables_values(char **in, const int number, const char *define_name);
-static char* expand_define_with_variables(const _define *root, char **variables_names);
+static char* process_define_with_variables(const _define *root, char **variables_names);
 
-//funkcja pozwalajaca na inicjalizacje root
+//Funkcja pozwalajaca na inicjalizacje drzewa _define.
 bool init_define()
 {
     if(root!=NULL)
@@ -25,7 +25,7 @@ bool init_define()
         return 0;
 }
 
-//konstruktor struktury _define
+//Konstruktor struktury _define.
 static _define* alloc_define()
 {
     _define *new_define=malloc(sizeof(_define));
@@ -41,7 +41,7 @@ static _define* alloc_define()
     return new_define;
 }
 
-//desktruktor calego drzewa _define
+//Desktruktor calego drzewa _define.
 static void destroy_all_defines(_define *element)
 {
     if(element==NULL)
@@ -52,7 +52,7 @@ static void destroy_all_defines(_define *element)
     free(element);
 }
 
-//funkcja usuwajaca cala zawartosc _define
+//Dunkcja usuwajaca cala zawartosc pojedynczego elemcntu _define.
 static void destroy_single_define(_define *element)
 {
     if(element->exist)
@@ -65,14 +65,14 @@ static void destroy_single_define(_define *element)
     }
 }
 
-//funkcja wywolujaca destruktor na root
+//Funkcja wywolujaca destruktor na drzewie _define.
 void destroy_define()
 {
     destroy_all_defines(root);
     root=NULL;
 }
 
-//fukcja pomocnicza sluzaca do przejscia gotowego drzewa strukury _define i zwrocenie danego defina
+//Fukcja pomocnicza szukajaca danego defina w juz stworzonym drzewie.
 static _define *go_to_define(const char *in)
 {
     _define *element=root;
@@ -91,6 +91,8 @@ static _define *go_to_define(const char *in)
     return element;
 }
 
+//Funkcja idzie najdalej jak to mozliwe po gotowym drzewie.
+//Brakujace galezie zostaja stworzone po drodze.
 static _define *create_way_to_define(const char *in)
 {
     _define *element=root;
@@ -137,8 +139,9 @@ static _define *create_way_to_define(const char *in)
     return element;
 }
 
-//fukcja wywolywana w celu sprawdzenia, czy w danej linii wystepuja uzycia juz zdefiniowanych makrodyrektyw #define
-char* expand_define(char *in)///---
+//Fukcja sprawdza, czy w podanej linii wystepuja uzycia juz zdefiniowanych makrodyrektyw #define.
+//Jezeli tak, zostaja zastapione zdefiniowana wczesciej wartoscia.
+char* process_define(char *in)///---
 {
     char *line=malloc(sizeof(char)*10);
     if(line==NULL)
@@ -181,11 +184,11 @@ char* expand_define(char *in)///---
                     return NULL;
                 }
 
-                char *expanded_define=expand_define_with_variables(element, variables_begin);
+                char *processed_define=process_define_with_variables(element, variables_begin);
                 for(char **variables=variables_begin; variables<variables_begin+element->variables_number; variables++)
                     free(*variables);
                 free(variables_begin);
-                if(expanded_define==NULL)
+                if(processed_define==NULL)
                 {
                     error_malloc();
                     free(word_begin);
@@ -193,8 +196,8 @@ char* expand_define(char *in)///---
                     return NULL;
                 }
                 *line='\0';
-                char *new_line=concat(line_begin, expanded_define);
-                free(expanded_define);
+                char *new_line=concat(line_begin, processed_define);
+                free(processed_define);
                 if(new_line==NULL)
                 {
                     error_malloc();
@@ -245,8 +248,9 @@ char* expand_define(char *in)///---
     *line='\0';
     return line_begin;
 }
-//funkcja wywolywana po znaleznieniu dyrektywy #define w celu dodania nowej definicji do listy
-bool add_define(char *in)///+
+
+//Funkcja wywolywana po znaleznieniu nowej dyrektywy #define w celu dodania jej do listy.
+bool add_define(char *in)
 {
     while(*in!='\0' && *in<=' ')
         in++;
@@ -264,7 +268,7 @@ bool add_define(char *in)///+
         return 1;
     }
 
-    char *new_in=expand_define(in);
+    char *new_in=process_define(in);
     if(new_in==NULL)
     {
         free(name_begin);
@@ -323,8 +327,9 @@ bool add_define(char *in)///+
     return 0;
 }
 
-//funkcja ma za zadanie wczytac zmienne, ktore beda uzywane w danej definicji, a nastepnie zwraca tablice zawierajaca ich nazwy
-char** read_variables_names(char **in, int *number)///+
+//Funkcja ma za zadanie wczytac zmienne, ktore beda uzywane w danej definicji.
+//Nastepnie zwraca tablice zawierajaca ich nazwy.
+char** read_variables_names(char **in, int *number)
 {
     char **variables_begin=malloc(10*sizeof(char*));
     if(variables_begin==NULL)
@@ -375,8 +380,8 @@ char** read_variables_names(char **in, int *number)///+
     return variables_begin;
 }
 
-///----
-bool add_value_to_define_with_variables(_define *element, char *in, char **variables_names)///+
+//Funkcja dodaje do danej definicji jej rozwiniecie, oraz zapisuje w jaki konkretnie sposob ma podstwaic zmienne
+bool add_value_to_define_with_variables(_define *element, char *in, char **variables_names)
 {
     element->variables_occur=(int*)malloc(10*sizeof(int));
     if(element->variables_occur==NULL)
@@ -451,7 +456,9 @@ bool add_value_to_define_with_variables(_define *element, char *in, char **varia
     return 0;
 }
 
-char** read_variables_values(char **in, const int number, const char *define_name)///+
+//Funkcja wczytuje wartosci, ktore przyjmuje dana definicja.
+//Nastepnie zwraca je w posctaci tablicy.
+char** read_variables_values(char **in, const int number, const char *define_name)
 {
     char **variables_begin=malloc(number*sizeof(char*));
     if(variables_begin==NULL)
@@ -504,7 +511,7 @@ char** read_variables_values(char **in, const int number, const char *define_nam
             (*in)++;
         }
         *name='\0';
-        name=expand_define(*variables);
+        name=process_define(*variables);
         if(name==NULL)
         {
             error_malloc();
@@ -543,7 +550,8 @@ char** read_variables_values(char **in, const int number, const char *define_nam
     return variables_begin;
 }
 
-char* expand_define_with_variables(const _define *element, char **variables_names)///+
+//Funkcja rozwija podana definicje przyjmujaca dane wartosci jako zmienne
+char* process_define_with_variables(const _define *element, char **variables_names)
 {
     char *line_begin=(char*)malloc(10*sizeof(char));
     if(line_begin==NULL)

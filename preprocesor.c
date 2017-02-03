@@ -48,7 +48,7 @@ int main()
         return 1;
     }
     free(name);
-    bool res=expand(input_file);
+    bool res=process(input_file);
     //niezaleznie od wyniku, wszystkie zmienne zdefiniowane w tej funckji byly poprawne, wiec nalezy je normalnie zwolnic przed wyjsciem z niej
 
     free(address);
@@ -58,10 +58,10 @@ int main()
     return res;
 }
 
-//fukcja otwierajaca plik wejsciowy i wyjsciowy
-static char *open(FILE **input_file)///---
+//Fukcja otwierajaca plik wejsciowy i wyjsciowy
+static char *open(FILE **input_file)
 {
-    ///printf("Podaj adres pliku wejsciowego: ");
+    printf("What file you want to process: ");
     *input_file=output_file=NULL;
     char *name=malloc(sizeof(char)*10);
     if(name==NULL)
@@ -72,8 +72,7 @@ static char *open(FILE **input_file)///---
     size_t lenmax=10, len=lenmax;
     int c,e;
     char *name_begin=name;
-    //wczytywanie w ten sposob umozliwia nam obsluge sciezek ujetych w " lub '
-    while((c=getc(stdin))!=EOF && c<=' ');
+    while((c=getc(stdin))!=EOF && c<=' ');  //wczytywanie w ten sposob umozliwia nam obsluge sciezek ujetych w " lub '
     if(c=='"' || c=='\'')
     {
         e=c;
@@ -100,7 +99,7 @@ static char *open(FILE **input_file)///---
         return NULL;
     }
     char *address=name_begin;
-    ///printf("Podaj adres pliku docelowego: ");
+    printf("Where you want to store the result: ");
     name=malloc(sizeof(char)*10);
     if(name==NULL)
     {
@@ -149,14 +148,12 @@ static void close(FILE *input_file)
 }
 
 //glowna funkcja oslugujaca przepisanie calego pliku i wywolujaca pozostale funkcje
-bool expand(FILE *input_file)
+bool process(FILE *input_file)
 {
     char *line;
     bool multiline_comment=0;
     while((line=get_line(input_file))!=NULL && *line!='\0')
     {
-        if(compare(line, "_CRTIMP int __mingw_stdio_redirect__(fprintf)(FILE*, const char*, ...);"))
-            printf("___________\n");
         char *line_begin=delete_comments(line, &multiline_comment);
         if(line_begin==NULL)
         {
@@ -180,8 +177,7 @@ bool expand(FILE *input_file)
             }
             if(compare(type, "include"))
             {
-                ///printf("include\n");
-                if(expand_include(line))
+                if(process_include(line))
                 {
                     free(type);
                     free(line_begin);
@@ -192,7 +188,6 @@ bool expand(FILE *input_file)
             {
                 if(compare(type, "define"))
                 {
-                ///printf("define %s\n", line);
                     if(add_define(line))
                     {
                         free(type);
@@ -202,13 +197,11 @@ bool expand(FILE *input_file)
                 }
                 else if(compare(type, "undef"))
                 {
-                ///printf("undef %s\n", line);
                     fprintf(output_file, "#%s %s\n",type, line);
                 }
                 else
                 {
-               /// printf("inne %s\n", line);
-                    line=expand_define(line);
+                    line=process_define(line);
                     free(line_begin);
                     if(line==NULL)
                     {
@@ -224,8 +217,7 @@ bool expand(FILE *input_file)
         }
         else
         {
-               /// printf("ogolne %s\n", line);
-            line=expand_define(line);
+            line=process_define(line);
             free(line_begin);
             if(line==NULL)
             {

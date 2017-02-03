@@ -9,6 +9,7 @@ static void destroy_all_includes(_include *element);
 static bool exist_incude(const char *name);
 static FILE *includes;
 
+//Inicjalizaja drzewa _include.
 bool init_include(const char *address)
 {
     includes=fopen("include.txt", "r");
@@ -27,7 +28,7 @@ bool init_include(const char *address)
         return 0;
 }
 
-//konstruktor struktury _include
+//Konstruktor struktury _include.
 static _include* alloc_include()
 {
     _include *new_include=malloc(sizeof(_include));
@@ -42,13 +43,14 @@ static _include* alloc_include()
     return new_include;
 }
 
+//Wywolanie funkcji usuwajacych.
 void destroy_include()
 {
     fclose(includes);
     destroy_all_includes(root);
 }
 
-//destruktor struktury _include
+//Destruktor struktury _include.
 static void destroy_all_includes(_include *element)
 {
     if(element==NULL)
@@ -58,8 +60,9 @@ static void destroy_all_includes(_include *element)
     free(element);
 }
 
-//fukcja wywolywana po znalezieniu dyrektywy #include i pozwalajaca otworzyc odpowiedni plik naglowkowy i go przepisac
-bool expand_include(const char *in)
+//Fukcja wywolywana po znalezieniu dyrektywy #include.
+// Pozwala otworzyc odpowiedni plik naglowkowy, a nastepnie go przepisac.
+bool process_include(const char *in)
 {
     while(*in<=' ')
         in++;
@@ -165,13 +168,12 @@ bool expand_include(const char *in)
         free(address_begin);
     }
 
-    bool res=expand(header);
+    bool res=process(header);
     fclose(header);
     return res;
 }
 
-
-//funkcja sprawdza czy dany plik naglowkowy zostal juz dodany
+//Funkcja sprawdza, czy dany plik naglowkowy zostal juz dodany do pliku wyjsciowego.
 static bool exist_incude(const char *name)
 {
     _include *element=root;
@@ -184,7 +186,7 @@ static bool exist_incude(const char *name)
     return (*name=='\0' && element!=NULL && element->exist);
 }
 
-//funkcja dodaje nowy plik naglowkowy do listy plikow, ktore juz wystapily
+//Funkcja dodaje nowy plik naglowkowy do listy plikow, ktore juz wystapily.
 bool add_include(const char *name)
 {
     _include *element=root;

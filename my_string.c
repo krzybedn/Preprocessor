@@ -8,7 +8,7 @@ int string_length(const char *s)
     return res;
 }
 
-bool is_letter(char c)//Liera nazywam dowolny znak sporod malych i duzych liter, cyfr oraz podkreslenia
+bool is_letter(char c)//Liera nazywam dowolny znak sporod malych i duzych liter, cyfr oraz podkreslenia.
 {
     return ((c>='a' && c<='z') || (c>='A' && c<='Z') || (c>='0' && c<='9') || c=='_');
 }
