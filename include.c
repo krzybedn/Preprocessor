@@ -119,7 +119,8 @@ bool process_include(const char *in)
         return 0;
     }
     add_include(address_begin);
-
+    if(compare(address_begin, "gnu/stubs.h"))
+        printf("--------------");
     if(end=='"')
     {
         char *full_address=concat(source, address_begin);
@@ -140,6 +141,8 @@ bool process_include(const char *in)
     }
     else if(*in=='>')
     {
+        printf("%s\n", address_begin);
+        rewind(includes);
         bool tmp=1;
         do
         {
@@ -148,7 +151,6 @@ bool process_include(const char *in)
             {
                 warning_no_include(address_begin);
                 free(address_begin);
-                fclose(includes);
                 return 0;
             }
             char *full_address=concat(include_adress, address_begin);
@@ -164,7 +166,6 @@ bool process_include(const char *in)
             }
             free(full_address);
         }while(tmp);
-        rewind(includes);
         free(address_begin);
     }
 

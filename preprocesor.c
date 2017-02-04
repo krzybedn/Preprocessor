@@ -146,19 +146,21 @@ static void close(FILE *input_file)
     if(output_file!=NULL)
         fclose(output_file);
 }
-
+char *concat_multiline(char *begin, FILE *input_file, bool *multiline_comment, char **next_line);
 //glowna funkcja oslugujaca przepisanie calego pliku i wywolujaca pozostale funkcje
 bool process(FILE *input_file)
 {
     char *line;
     bool multiline_comment=0;
-    while((line=get_line(input_file))!=NULL && *line!='\0')
+    char *next_line=NULL;
+    while((line=(next_line==NULL?get_line(input_file):next_line))!=NULL && *line!='\0')
     {
-        char *line_begin=delete_comments(line, &multiline_comment);
+        next_line=NULL;
+        char *line_begin=concat_multiline(line, input_file, &multiline_comment, &next_line);
+        free(line);
         if(line_begin==NULL)
         {
             error_malloc();
-            free(line);
             return 1;
         }
         line=line_begin;
@@ -195,21 +197,8 @@ bool process(FILE *input_file)
                         return 1;
                     }
                 }
-                else if(compare(type, "undef"))
-                {
-                    fprintf(output_file, "#%s %s\n",type, line);
-                }
                 else
                 {
-                    line=process_define(line);
-                    free(line_begin);
-                    if(line==NULL)
-                    {
-                        error_malloc();
-                        free(type);
-                        return 1;
-                    }
-                    line_begin=line;
                     fprintf(output_file, "#%s %s\n",type, line);
                 }
             }
@@ -221,13 +210,10 @@ bool process(FILE *input_file)
             free(line_begin);
             if(line==NULL)
             {
-                error_malloc();
                 return 1;
             }
             line_begin=line;
-            fprintf(output_file, "%s",line);
-            if(*line!='\n' && *line!='\0')//Dzieki takim zabiegom nie pomijamy linii pustych
-                fprintf(output_file, "\n");
+            fprintf(output_file, "%s\n",line);
         }
         free(line_begin);
     }
@@ -238,4 +224,121 @@ bool process(FILE *input_file)
     }
     free(line);
     return 0;
+}
+
+char *clearing(char *in, bool *multiline_comment)
+{
+    char *line_begin=delete_comments(in, multiline_comment);
+    if(line_begin==NULL)
+    {
+        return NULL;
+    }
+    in=line_begin;
+    in=delete_whitespaces_from_end(line_begin);
+    if(in==NULL)
+    {
+        free(line_begin);
+        return NULL;
+    }
+    return in;
+}
+
+char *concat_multiline(char *begin, FILE *input_file, bool *multiline_comment, char **next_line)///DO DOKONCZENIA< NAJLEPIEJ NA LINUKSIE
+{
+    char *line_begin=clearing(begin, multiline_comment);
+    if(line_begin==NULL)
+    {
+        return NULL;
+    }
+    char *line=line_begin;
+    if(*line_begin=='#')
+    {
+        while(*(line_begin+string_length(line_begin)-1)=='\\')
+        {
+            //usuwamy znak '\\' z konca linii
+            *(line_begin+string_length(line_begin)-1)='\0';
+            line=get_line(input_file);
+            if(line==NULL)
+            {
+                free(line_begin);
+                return NULL;
+            }
+            if(*line=='\0')
+            {
+                free(line);
+                return line_begin;
+            }
+            char *new_line=clearing(line, multiline_comment);
+            free(line);
+            if(new_line==NULL)
+            {
+                free(line_begin);
+                return NULL;
+            }
+            line=new_line;
+
+            new_line=concat(line_begin, "\n");
+            free(line_begin);
+            if(new_line==NULL)
+            {
+                return NULL;
+            }
+            line_begin=new_line;
+            new_line=concat(line_begin, line);
+            free(line_begin);
+            free(line);
+            if(new_line==NULL)
+            {
+                return NULL;
+            }
+            line_begin=line=new_line;
+        }
+    }
+    else
+    {
+        while(*(line_begin+string_length(line_begin)-1)!=';' && *(line_begin+string_length(line_begin)-1)!='{')
+        {
+            line=get_line(input_file);
+            if(line==NULL)
+            {
+                free(line_begin);
+                return NULL;
+            }
+            if(*line=='\0')
+            {
+                free(line);
+                return line_begin;
+            }
+            if(*line=='#')
+            {
+                *next_line=line;
+                return line_begin;
+            }
+            char *new_line=clearing(line, multiline_comment);
+            free(line);
+            if(new_line==NULL)
+            {
+                free(line_begin);
+                return NULL;
+            }
+            line=new_line;
+
+            new_line=concat(line_begin, "\n");
+            free(line_begin);
+            if(new_line==NULL)
+            {
+                return NULL;
+            }
+            line_begin=new_line;
+            new_line=concat(line_begin, line);
+            free(line_begin);
+            free(line);
+            if(new_line==NULL)
+            {
+                return NULL;
+            }
+            line_begin=new_line;
+        }
+    }
+    return line_begin;
 }

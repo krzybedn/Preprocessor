@@ -141,7 +141,7 @@ static _define *create_way_to_define(const char *in)
 
 //Fukcja sprawdza, czy w podanej linii wystepuja uzycia juz zdefiniowanych makrodyrektyw #define.
 //Jezeli tak, zostaja zastapione zdefiniowana wczesciej wartoscia.
-char* process_define(char *in)///---
+char* process_define(char *in)
 {
     char *line=malloc(sizeof(char)*10);
     if(line==NULL)
@@ -207,7 +207,7 @@ char* process_define(char *in)///---
                 }
                 lenmax=string_length(new_line)+1;
                 len=1;
-                line=new_line+lenmax;
+                line=new_line+lenmax-1;
                 line_begin=new_line;
             }
             else
@@ -345,7 +345,7 @@ char** read_variables_names(char **in, int *number)
     {
         if(++variables_num==variables_max)
         {
-            char **variables_new=realloc(variables_begin, variables_max*=2);
+            char **variables_new=realloc(variables_begin, sizeof(char*)*(variables_max*=2));
             if(variables_new==NULL)
             {
                 for(char** variables=variables_begin; variables<variables_begin+variables_num-1; variables++)
@@ -354,6 +354,7 @@ char** read_variables_names(char **in, int *number)
                 return NULL;
             }
             variables=variables_new+variables_num;
+            variables_begin=variables_new;
         }
         *variables=subword(in);
         if(*variables==NULL)
@@ -385,6 +386,11 @@ bool add_value_to_define_with_variables(_define *element, char *in, char **varia
 {
     element->variables_occur=(int*)malloc(10*sizeof(int));
     if(element->variables_occur==NULL)
+    {
+        return 1;
+    }
+    element->variebles_position=(int*)malloc(10*sizeof(int));
+    if(element->variebles_position==NULL)
     {
         return 1;
     }
@@ -425,9 +431,16 @@ bool add_value_to_define_with_variables(_define *element, char *in, char **varia
                         return 1;
                     }
                     element->variables_occur=new_occ;
+                    int *new_pos=(int*)realloc(element->variebles_position, (variables_max*=2)*sizeof(int));
+                    if(new_pos==NULL)
+                    {
+                        return 1;
+                    }
+                    element->variebles_position=new_pos;
                 }
                 *(element->variables_occur+element->variables_occur_number)=i;
-                element->value=add_char_to_string(&line, element->value, &len, &lenmax, '\n');
+                *(element->variebles_position+element->variables_occur_number)=line-element->value;
+                ///element->value=add_char_to_string(&line, element->value, &len, &lenmax, '\n');
                 element->variables_occur_number++;
                 name_is_variable=1;
                 //wiemy ze cala zawartosc defina ma jedna linijke, mozemy wiec wykorzystac zank '\n' jako znak zmiennej
@@ -445,8 +458,8 @@ bool add_value_to_define_with_variables(_define *element, char *in, char **varia
             {
                 return 1;
             }
-            line=new_line+string_length(new_line);
             lenmax=string_length(new_line)+1;
+            line=new_line+lenmax-1;
             len=1;
             free(element->value);
             element->value=new_line;
@@ -564,7 +577,8 @@ char* process_define_with_variables(const _define *element, char **variables_nam
     char *in=element->value;
     while(*in!='\0')
     {
-        if(*in=='\n')
+        if(variables_number<element->variables_occur_number &&
+            element->value==in-*(element->variebles_position+variables_number))
         {
             char *variable=*(variables_names+*(element->variables_occur+variables_number));
             *line='\0';
@@ -580,13 +594,10 @@ char* process_define_with_variables(const _define *element, char **variables_nam
             line_begin=new_line;
             variables_number++;
         }
-        else
+        line_begin=add_char_to_string(&line, line_begin, &len, &len_max, *in);
+        if(line_begin==NULL)
         {
-            line_begin=add_char_to_string(&line, line_begin, &len, &len_max, *in);
-            if(line_begin==NULL)
-            {
-                return NULL;
-            }
+            return NULL;
         }
         in++;
     }

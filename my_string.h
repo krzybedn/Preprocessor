@@ -17,5 +17,6 @@ bool is_letter(char c);
 bool compare(const char *s1, const char *s2);
 char *split_by_last_slash(char **address);
 char *delete_comments(char *in, bool *multiline_comment);
+char *delete_whitespaces_from_end(char *in);
 
 #endif // MY_STRING_H_INCLUDED

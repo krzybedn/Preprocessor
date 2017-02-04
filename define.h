@@ -16,6 +16,7 @@ typedef struct _define
     int variables_number;
     /******************************/
     int variables_occur_number;//liczba wystapien zmiennych na roznych pozycjach
+    int *variebles_position;
     int *variables_occur;//jaka zamienna wystepuje na danej pozycji
 }_define;
 
