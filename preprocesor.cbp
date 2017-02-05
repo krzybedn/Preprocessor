@@ -38,14 +38,10 @@
 		<Unit filename="errors.c">
 			<Option compilerVar="CC" />
 		</Unit>
-		<Unit filename="errors.h" />
 		<Unit filename="include.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="include.h" />
-		<Unit filename="main.c">
-			<Option compilerVar="CC" />
-		</Unit>
 		<Unit filename="my_string.c">
 			<Option compilerVar="CC" />
 		</Unit>
