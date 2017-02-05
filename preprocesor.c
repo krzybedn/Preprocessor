@@ -5,9 +5,17 @@ static FILE *output_file;
 static char *open(FILE **input_file);
 static void close(FILE *input_file);
 
+//#define cos(a,b) (a##b)
+
+/*int nic(int cos)
+{
+    printf("%d", cos);
+}*/
 //glowna funkcja
 int main()
 {
+    //nic(1);
+    //printf("cos(1,2) = %d", cos(1,2));
     FILE *input_file;
     char *address;
     if((address=open(&input_file))==NULL)

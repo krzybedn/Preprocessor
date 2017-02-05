@@ -119,7 +119,7 @@ bool process_include(const char *in)
         return 0;
     }
     add_include(address_begin);
-    if(compare(address_begin, "gnu/stubs.h"))
+    if(compare(address_begin, "bits/wchar2.h"))
         printf("--------------");
     if(end=='"')
     {
