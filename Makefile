@@ -20,5 +20,5 @@ errors.o: errors.c
 .PHONY : clean
 #Niestety nie działa na systemie Windows
 clean:
-	rm -Force $(OBJS) $(NAME)
+	rm -f $(OBJS) $(NAME)
 

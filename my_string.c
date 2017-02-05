@@ -27,6 +27,7 @@ void string_append(char *s1, const char *s2)
 
 char *add_char_to_string(char **s, char *s_begin, size_t *len,  size_t *lenmax, char c)
 {
+    char *nic=*s;
     if(--(*len)==0)
     {
         *len=*lenmax;
@@ -39,7 +40,9 @@ char *add_char_to_string(char **s, char *s_begin, size_t *len,  size_t *lenmax, 
         *s=s_new+(*s-s_begin);
         s_begin=s_new;
     }
+    nic=*s;
     **s=c;
+    nic=*s;
     (*s)++;
     return s_begin;
 }
@@ -59,11 +62,11 @@ char *concat(const char *s1, const char *s2)
 
 char *get_line(FILE *in)
 {
-    char *line=malloc(100);
+    char *line=malloc(10);
     if(line==NULL)
         return NULL;
     char *line_begin=line;
-    size_t lenmax=100, len=lenmax;
+    size_t lenmax=10, len=lenmax;
     int c;
 
     while((c=getc(in))!=EOF && c!='\n')
@@ -216,4 +219,34 @@ char *delete_comments(char *in, bool *multiline_comment)
     }
     *line='\0';
     return line_begin;
+}
+
+
+char *delete_whitespaces_from_end(char *in)
+{
+    char *line=in+string_length(in)-1;
+    while(*line<=' ' && line>in)
+        line--;
+    if(*line<=' ')
+    {
+        free(in);
+        line=malloc(sizeof(char));
+        if(line==NULL)
+            return NULL;
+        *line='\0';
+        return line;
+    }
+    else
+    {
+        int len=line-in+2;
+        char *new_line=realloc(in, sizeof(char)*len);
+        if(new_line==NULL)
+        {
+            free(in);
+            return NULL;
+        }
+        *(new_line+len-1)='\0';
+        return new_line;
+    }
+
 }
