@@ -15,9 +15,9 @@ typedef struct _define
     bool variables_exist;
     int variables_number;
     int variables_occur_number;//liczba wystapien zmiennych na roznych pozycjach
-    int *variebles_position;
-    int *variables_occur;//jaka zamienna wystepuje na danej pozycji
-    bool VA_ARGS;
+    int *variables_occur;//jaka zamienna wystepuje jako kolejna
+    int *variebles_position;//pozycja, na której ona wystepuje
+    bool VA_ARGS;//zmienna infurmujaca, czy wystepuje argumen "..."
 }_define;
 
 

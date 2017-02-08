@@ -17,8 +17,8 @@ extern bool process(FILE *input_file);
 
 bool init_include(const char *address);
 void destroy_include();
-bool process_include(const char *in);
 bool add_include(const char *name);
+bool process_include(const char *in);
 
 
 extern void error_malloc();

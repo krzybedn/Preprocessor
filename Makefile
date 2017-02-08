@@ -18,7 +18,7 @@ errors.o: errors.c
 	$(CC) $(CFLAGS) -c -o errors.o errors.c
 	
 .PHONY : clean
-#Niestety nie działa na systemie Windows
+#Niestety opcja clean nie działa na systemie Windows
 clean:
 	rm -f $(OBJS) $(NAME)
 

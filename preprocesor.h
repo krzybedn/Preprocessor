@@ -11,6 +11,7 @@
 bool process(FILE *input_file);
 
 extern void error_malloc();
+extern void error_main_arguments();
 extern void error_file_open(const char *name);
 
 #endif // PREPROCESOR_H_INCLUDED

@@ -2,13 +2,14 @@
 
 static _include *root;
 static const char *source;
-
+static FILE *includes;
 
 static _include* alloc_include();
 static void destroy_all_includes(_include *element);
 static bool exist_incude(const char *name);
-static FILE *includes;
 
+/****************************************************************************/
+/******************* INICJALIZACJA ******************************************/
 //Inicjalizaja drzewa _include.
 bool init_include(const char *address)
 {
@@ -43,6 +44,8 @@ static _include* alloc_include()
     return new_include;
 }
 
+/****************************************************************************/
+/******************* DESTRUKCJA *********************************************/
 //Wywolanie funkcji usuwajacych.
 void destroy_include()
 {
@@ -60,6 +63,31 @@ static void destroy_all_includes(_include *element)
     free(element);
 }
 
+/****************************************************************************/
+/******************* DODAWANIE **********************************************/
+//Funkcja dodaje nowy plik naglowkowy do listy plikow, ktore juz wystapily.
+bool add_include(const char *name)
+{
+    _include *element=root;
+    while(*name!='\0')
+    {
+        if(element->childs[(int)(*name)]==NULL)
+        {
+            if((element->childs[(int)(*name)]=alloc_include())==NULL)
+            {
+                error_malloc();
+                return 1;
+            }
+        }
+        element=element->childs[(int)(*name)];
+        name++;
+    }
+    element->exist=1;
+    return 0;
+}
+
+/****************************************************************************/
+/******************* UZYCIE *************************************************/
 //Fukcja wywolywana po znalezieniu dyrektywy #include.
 // Pozwala otworzyc odpowiedni plik naglowkowy, a nastepnie go przepisac.
 bool process_include(const char *in)
@@ -119,8 +147,6 @@ bool process_include(const char *in)
         return 0;
     }
     add_include(address_begin);
-    if(compare(address_begin, "bits/wchar2.h"))
-        printf("--------------");
     if(end=='"')
     {
         char *full_address=concat(source, address_begin);
@@ -141,7 +167,6 @@ bool process_include(const char *in)
     }
     else if(*in=='>')
     {
-        printf("%s\n", address_begin);
         rewind(includes);
         bool tmp=1;
         do
@@ -187,23 +212,3 @@ static bool exist_incude(const char *name)
     return (*name=='\0' && element!=NULL && element->exist);
 }
 
-//Funkcja dodaje nowy plik naglowkowy do listy plikow, ktore juz wystapily.
-bool add_include(const char *name)
-{
-    _include *element=root;
-    while(*name!='\0')
-    {
-        if(element->childs[(int)(*name)]==NULL)
-        {
-            if((element->childs[(int)(*name)]=alloc_include())==NULL)
-            {
-                error_malloc();
-                return 1;
-            }
-        }
-        element=element->childs[(int)(*name)];
-        name++;
-    }
-    element->exist=1;
-    return 0;
-}

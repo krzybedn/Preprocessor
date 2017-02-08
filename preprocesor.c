@@ -2,25 +2,34 @@
 
 static FILE *output_file;
 
-static char *open(FILE **input_file);
+static char *open_from_command_line(FILE **input_file);
+static char *open_from_program_arguments(FILE **input_file, char *input_address, char *output_address);
 static void close(FILE *input_file);
 
-//#define cos(a,b) (a##b)
-
-/*int nic(int cos)
+int main(int argc, char * argv[])
 {
-    printf("%d", cos);
-}*/
-//glowna funkcja
-int main()
-{
-    //nic(1);
-    //printf("cos(1,2) = %d", cos(1,2));
     FILE *input_file;
     char *address;
-    if((address=open(&input_file))==NULL)
+    if(argc==1)
     {
-        close(input_file);
+        if((address=open_from_command_line(&input_file))==NULL)
+        {
+            close(input_file);
+            return 1;
+        }
+    }
+    else if(argc==3)
+    {
+        address=open_from_program_arguments(&input_file, argv[1], argv[2]);
+        if(address==NULL)
+        {
+            close(input_file);
+            return 1;
+        }
+    }
+    else
+    {
+        error_main_arguments();
         return 1;
     }
     char *name=address;
@@ -66,8 +75,8 @@ int main()
     return res;
 }
 
-//Fukcja otwierajaca plik wejsciowy i wyjsciowy
-static char *open(FILE **input_file)
+//Fukcja otwierajaca plik wejsciowy i wyjsciowy, gdy nie zosta³y one przekazane przy uruchamianiu programu
+static char *open_from_command_line(FILE **input_file)
 {
     printf("What file you want to process: ");
     *input_file=output_file=NULL;
@@ -146,7 +155,33 @@ static char *open(FILE **input_file)
     return address;
 }
 
-//fukcja zamykajaca plik wejsciowy i wyjsciowy
+//Funkcja otwierajaca plik wejsciowy i wejsciowy przekazane jako argument wejsciowy programu
+static char *open_from_program_arguments(FILE **input_file, char *input_address, char *output_address)
+{
+    output_file=NULL;
+    *input_file=fopen(input_address, "r");
+    if(*input_file==NULL)
+    {
+        error_file_open(input_address);
+        return NULL;
+    }
+    output_file=fopen(output_address, "w");
+    if(output_file==NULL)
+    {
+        error_file_open(output_address);
+        return NULL;
+    }
+    char *address=malloc(string_length(input_address)*sizeof(char));
+    if(address==NULL)
+    {
+        error_malloc();
+        return NULL;
+    }
+    string_copy(address, input_address);
+    return address;
+}
+
+//Fukcja zamykajaca plik wejsciowy i wyjsciowy
 static void close(FILE *input_file)
 {
     if(input_file!=NULL)
@@ -154,8 +189,8 @@ static void close(FILE *input_file)
     if(output_file!=NULL)
         fclose(output_file);
 }
-char *concat_multiline(char *begin, FILE *input_file, bool *multiline_comment, char **next_line);
-//glowna funkcja oslugujaca przepisanie calego pliku i wywolujaca pozostale funkcje
+
+//Glowna funkcja obslugujaca przepisanie calego pliku i wywolujaca pozostale funkcje
 bool process(FILE *input_file)
 {
     char *line;
@@ -234,119 +269,3 @@ bool process(FILE *input_file)
     return 0;
 }
 
-char *clearing(char *in, bool *multiline_comment)
-{
-    char *line_begin=delete_comments(in, multiline_comment);
-    if(line_begin==NULL)
-    {
-        return NULL;
-    }
-    in=line_begin;
-    in=delete_whitespaces_from_end(line_begin);
-    if(in==NULL)
-    {
-        free(line_begin);
-        return NULL;
-    }
-    return in;
-}
-
-char *concat_multiline(char *begin, FILE *input_file, bool *multiline_comment, char **next_line)///DO DOKONCZENIA< NAJLEPIEJ NA LINUKSIE
-{
-    char *line_begin=clearing(begin, multiline_comment);
-    if(line_begin==NULL)
-    {
-        return NULL;
-    }
-    char *line=line_begin;
-    if(*line_begin=='#')
-    {
-        while(*(line_begin+string_length(line_begin)-1)=='\\')
-        {
-            //usuwamy znak '\\' z konca linii
-            *(line_begin+string_length(line_begin)-1)='\0';
-            line=get_line(input_file);
-            if(line==NULL)
-            {
-                free(line_begin);
-                return NULL;
-            }
-            if(*line=='\0')
-            {
-                free(line);
-                return line_begin;
-            }
-            char *new_line=clearing(line, multiline_comment);
-            free(line);
-            if(new_line==NULL)
-            {
-                free(line_begin);
-                return NULL;
-            }
-            line=new_line;
-
-            new_line=concat(line_begin, "\n");
-            free(line_begin);
-            if(new_line==NULL)
-            {
-                return NULL;
-            }
-            line_begin=new_line;
-            new_line=concat(line_begin, line);
-            free(line_begin);
-            free(line);
-            if(new_line==NULL)
-            {
-                return NULL;
-            }
-            line_begin=line=new_line;
-        }
-    }
-    else
-    {
-        while(*(line_begin+string_length(line_begin)-1)!=';' && *(line_begin+string_length(line_begin)-1)!='{')
-        {
-            line=get_line(input_file);
-            if(line==NULL)
-            {
-                free(line_begin);
-                return NULL;
-            }
-            if(*line=='\0')
-            {
-                free(line);
-                return line_begin;
-            }
-            if(*line=='#')
-            {
-                *next_line=line;
-                return line_begin;
-            }
-            char *new_line=clearing(line, multiline_comment);
-            free(line);
-            if(new_line==NULL)
-            {
-                free(line_begin);
-                return NULL;
-            }
-            line=new_line;
-
-            new_line=concat(line_begin, "\n");
-            free(line_begin);
-            if(new_line==NULL)
-            {
-                return NULL;
-            }
-            line_begin=new_line;
-            new_line=concat(line_begin, line);
-            free(line_begin);
-            free(line);
-            if(new_line==NULL)
-            {
-                return NULL;
-            }
-            line_begin=new_line;
-        }
-    }
-    return line_begin;
-}

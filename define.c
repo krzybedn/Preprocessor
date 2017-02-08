@@ -7,13 +7,16 @@ static void destroy_single_define(_define *element);
 static void destroy_all_defines(_define *element);
 
 static _define *go_to_define(const char *in);
-static _define *create_way_to_define(const char *in);
 static char** read_variables_names(char **line, int *number, bool *VA_ARGS);
-static bool add_value_to_define_with_variables(_define *root, char *line, char **variables_names);
-static char** read_variables_values(char **in, const int number, const char *define_name, bool VA_ARGS);
-static char* process_define_with_variables(const _define *root, char **variables_names);
 bool add_variable_occur_to_list(_define *element, int *variables_max, int i, int position);
+static bool add_value_to_define_with_variables(_define *root, char *line, char **variables_names);
 
+static char* process_define_with_variables(const _define *root, char **variables_names);
+static _define *create_way_to_define(const char *in);
+static char** read_variables_values(char **in, const int number, const char *define_name, bool VA_ARGS);
+
+/****************************************************************************/
+/******************* INICJALIZACJA ******************************************/
 //Funkcja pozwalajaca na inicjalizacje drzewa _define.
 bool init_define()
 {
@@ -43,7 +46,16 @@ static _define* alloc_define()
     return new_define;
 }
 
-//Desktruktor calego drzewa _define.
+/****************************************************************************/
+/******************* DESTRUKCJA *********************************************/
+//Funkcja wywolujaca destruktor na drzewie _define.
+void destroy_define()
+{
+    destroy_all_defines(root);
+    root=NULL;
+}
+
+//Destruktor calego drzewa _define.
 static void destroy_all_defines(_define *element)
 {
     if(element==NULL)
@@ -67,11 +79,81 @@ static void destroy_single_define(_define *element)
     }
 }
 
-//Funkcja wywolujaca destruktor na drzewie _define.
-void destroy_define()
+/****************************************************************************/
+/******************* DODAWANIE **********************************************/
+//Funkcja wywolywana po znaleznieniu nowej dyrektywy #define w celu dodania jej do listy.
+bool add_define(char *in)
 {
-    destroy_all_defines(root);
-    root=NULL;
+    while(*in!='\0' && *in<=' ')
+        in++;
+    char *name=subword(&in);
+    if(name==NULL)
+    {
+        error_malloc();
+        return 1;
+    }
+    char *name_begin=name;
+    _define *element=create_way_to_define(name);
+    if(element==NULL)
+    {
+        error_malloc();
+        return 1;
+    }
+
+
+    if(element->exist)
+        warning_define_exist(name_begin);
+    element->exist=1;
+    if(*in=='(')
+    {
+        char **variables_begin=read_variables_names(&in, &element->variables_number, &element->VA_ARGS);
+        if(variables_begin==NULL)
+        {
+            error_malloc();
+            free(name_begin);
+            return 1;
+        }
+        element->variables_exist=1;
+        if(in=='\0')
+        {
+            error_endless_string(name_begin);
+            free(name_begin);
+            return 1;
+        }
+        if(add_value_to_define_with_variables(element, in, variables_begin))
+        {
+            error_malloc();
+            free(name_begin);
+            return 1;
+        }
+    }
+    else
+    {
+        element->variables_exist=0;///osobna funkcja??
+        while(*in!='\0' && *in<=' ')
+            in++;
+        element->value="\0";
+        char *new_word=concat(element->value, in);
+        if(new_word==NULL)
+        {
+            error_malloc();
+            free(name_begin);
+            element->value=NULL;
+            return NULL;
+        }
+        element->value=new_word;
+        new_word=process_define(element->value);
+        if(new_word==NULL)
+        {
+            error_malloc();
+            free(name_begin);
+            element->value=NULL;
+            return NULL;
+        }
+        element->value=new_word;
+    }
+    free(name_begin);
+    return 0;
 }
 
 //Fukcja pomocnicza szukajaca danego defina w juz stworzonym drzewie.
@@ -91,263 +173,6 @@ static _define *go_to_define(const char *in)
         in++;
     }
     return element;
-}
-
-//Funkcja idzie najdalej jak to mozliwe po gotowym drzewie.
-//Brakujace galezie zostaja stworzone po drodze.
-static _define *create_way_to_define(const char *in)
-{
-    _define *element=root;
-    while(element!=NULL && is_letter(*in))
-    {
-        if(*in>='a' && *in<='z')
-        {
-            if(element->childs[*in-'a']==NULL)
-            {
-                if((element->childs[*in-'a']=alloc_define())==NULL)
-                    return NULL;
-            }
-            element=element->childs[*in-'a'];
-        }
-        else if(*in>='A' && *in<='Z')
-        {
-            if(element->childs[26+*in-'A']==NULL)
-            {
-                if((element->childs[26+*in-'A']=alloc_define())==NULL)
-                    return NULL;
-            }
-            element=element->childs[26+*in-'A'];
-        }
-        else if(*in>='0' && *in<='9')
-        {
-            if(element->childs[52+*in-'0']==NULL)
-            {
-                if((element->childs[52+*in-'0']=alloc_define())==NULL)
-                    return NULL;
-            }
-            element=element->childs[52+*in-'0'];
-        }
-        else if(*in=='_')
-        {
-            if(element->childs[62]==NULL)
-            {
-                if((element->childs[62]=alloc_define())==NULL)
-                    return NULL;
-            }
-            element=element->childs[62];
-        }
-        in++;
-    }
-    return element;
-}
-
-//Fukcja sprawdza, czy w podanej linii wystepuja uzycia juz zdefiniowanych makrodyrektyw #define.
-//Jezeli tak, zostaja zastapione zdefiniowana wczesciej wartoscia.
-char* process_define(char *in)
-{
-    char *line=malloc(sizeof(char)*10);
-    if(line==NULL)
-    {
-        error_malloc();
-        return NULL;
-    }
-    char *line_begin=line;
-    size_t lenmax=10, len=lenmax;
-    bool is_string=0;
-    while(*in!='\0')
-    {
-        _define *element=root;
-        while(*in!='\0' && (!is_letter(*in) || is_string))
-        {
-            if(*in=='"')
-                is_string=!is_string;
-            line_begin=add_char_to_string(&line, line_begin, &len, &lenmax, *in++);
-            if(line_begin==NULL)
-            {
-                error_malloc();
-                return NULL;
-            }
-        }
-        char *word=subword(&in);
-        if(word==NULL)
-        {
-            error_malloc();
-            free(line_begin);
-            return NULL;
-        }
-        char *word_begin=word;
-        element=go_to_define(word_begin);
-        if(element!=NULL && element->exist)
-        {
-            if(element->variables_exist)
-            {
-                if(*in!='(')
-                {
-                    *line='\0';
-                    char *new_line=concat(line_begin, element->value);
-                    free(line_begin);
-                    if(new_line==NULL)
-                    {
-                        error_malloc();
-                        free(word_begin);
-                        return NULL;
-                    }
-                    lenmax=string_length(new_line)+1;
-                    len=1;
-                    line=new_line+lenmax-1;
-                    line_begin=new_line;
-                    continue;
-                }
-                char **variables_begin=read_variables_values(&in, element->variables_number, word_begin, element->VA_ARGS);
-                if(variables_begin==NULL)
-                {
-                    free(word_begin);
-                    free(line_begin);
-                    return NULL;
-                }
-
-                char *processed_define=process_define_with_variables(element, variables_begin);
-                for(char **variables=variables_begin; variables<variables_begin+element->variables_number; variables++)
-                    free(*variables);
-                free(variables_begin);
-                if(processed_define==NULL)
-                {
-                    free(word_begin);
-                    free(line_begin);
-                    return NULL;
-                }
-                *line='\0';
-                char *new_line=concat(line_begin, processed_define);
-                free(processed_define);
-                if(new_line==NULL)
-                {
-                    error_malloc();
-                    free(word);
-                    free(line_begin);
-                    return NULL;
-                }
-                lenmax=string_length(new_line)+1;
-                len=1;
-                line=new_line+lenmax-1;
-                line_begin=new_line;
-            }
-            else
-            {
-                *line='\0';
-                char *new_line=concat(line_begin, element->value);
-                free(line_begin);
-                if(new_line==NULL)
-                {
-                    error_malloc();
-                    free(word_begin);
-                    return NULL;
-                }
-                lenmax=string_length(new_line)+1;
-                len=1;
-                line=new_line+lenmax-1;
-                line_begin=new_line;
-            }
-        }
-        else
-        {
-            *line='\0';
-            char *new_line=concat(line_begin, word_begin);
-            free(line_begin);
-            if(new_line==NULL)
-            {
-                error_malloc();
-                free(word_begin);
-                return NULL;
-            }
-            lenmax=string_length(new_line)+1;
-            len=1;
-            line=new_line+lenmax-1;
-            line_begin=new_line;
-        }
-        free(word_begin);
-    }
-    *line='\0';
-    return line_begin;
-}
-
-//Funkcja wywolywana po znaleznieniu nowej dyrektywy #define w celu dodania jej do listy.
-bool add_define(char *in)
-{
-    while(*in!='\0' && *in<=' ')
-        in++;
-    char *name=subword(&in);
-    if(name==NULL)
-    {
-        error_malloc();
-        return 1;
-    }
-    char *name_begin=name;
-    if(compare(name_begin, "__restrict"))
-        printf("-------------\n");
-    _define *element=create_way_to_define(name);
-    if(element==NULL)
-    {
-        error_malloc();
-        return 1;
-    }
-
-    char *in_begin=process_define(in);
-    if(in_begin==NULL)
-    {
-        free(name_begin);
-        return 1;
-    }
-    in=in_begin;
-
-    if(element->exist)
-        warning_define_exist(name_begin);
-    element->exist=1;
-    if(*in=='(')
-    {
-        char **variables_begin=read_variables_names(&in, &element->variables_number, &element->VA_ARGS);
-        if(variables_begin==NULL)
-        {
-            error_malloc();
-            free(in_begin);
-            free(name_begin);
-            return 1;
-        }
-        element->variables_exist=1;
-        if(in=='\0')
-        {
-            error_endless_string(name_begin);
-            free(in_begin);
-            free(name_begin);
-            return 1;
-        }
-        if(add_value_to_define_with_variables(element, in, variables_begin))
-        {
-            error_malloc();
-            free(in_begin);
-            free(name_begin);
-            return 1;
-        }
-    }
-    else
-    {
-        element->variables_exist=0;///osobna funkcja??
-        while(*in!='\0' && *in<=' ')
-            in++;
-        element->value="\0";
-        char *new_word=concat(element->value, in);
-        if(new_word==NULL)
-        {
-            error_malloc();
-            free(in_begin);
-            free(name_begin);
-            element->value=NULL;
-            return NULL;
-        }
-        element->value=new_word;
-    }
-    free(in_begin);
-    free(name_begin);
-    return 0;
 }
 
 //Funkcja ma za zadanie wczytac zmienne, ktore beda uzywane w danej definicji.
@@ -496,6 +321,266 @@ bool add_value_to_define_with_variables(_define *element, char *in, char **varia
     return 0;
 }
 
+bool add_variable_occur_to_list(_define *element, int *variables_max, int i, int position)
+{
+    if(element->variables_occur_number==*variables_max)
+    {
+        (*variables_max)*=2;
+        int *new_occ=(int*)realloc(element->variables_occur, (*variables_max)*sizeof(int));
+        if(new_occ==NULL)
+        {
+            return 1;
+        }
+        element->variables_occur=new_occ;
+        int *new_pos=(int*)realloc(element->variebles_position, (*variables_max)*sizeof(int));
+        if(new_pos==NULL)
+        {
+            return 1;
+        }
+        element->variebles_position=new_pos;
+    }
+    *(element->variables_occur+element->variables_occur_number)=i;
+    *(element->variebles_position+element->variables_occur_number)=position;
+    element->variables_occur_number++;
+    if(element->value==NULL)
+    {
+        return 1;
+    }
+    return 0;
+}
+
+/****************************************************************************/
+/******************* UZYCIE *************************************************/
+//Fukcja sprawdza, czy w podanej linii wystepuja uzycia juz zdefiniowanych makrodyrektyw #define.
+//Jezeli tak, zostaja zastapione zdefiniowana wczesciej wartoscia.
+char* process_define(char *in)
+{
+    char *line=malloc(sizeof(char)*10);
+    if(line==NULL)
+    {
+        error_malloc();
+        return NULL;
+    }
+    char *line_begin=line;
+    size_t lenmax=10, len=lenmax;
+    bool is_string=0;
+    while(*in!='\0')
+    {
+        _define *element=root;
+        while(*in!='\0' && (!is_letter(*in) || is_string))
+        {
+            if(*in=='"')
+                is_string=!is_string;
+            line_begin=add_char_to_string(&line, line_begin, &len, &lenmax, *in++);
+            if(line_begin==NULL)
+            {
+                error_malloc();
+                return NULL;
+            }
+        }
+        char *word=subword(&in);
+        if(word==NULL)
+        {
+            error_malloc();
+            free(line_begin);
+            return NULL;
+        }
+        char *word_begin=word;
+        element=go_to_define(word_begin);
+        if(element!=NULL && element->exist)
+        {
+            if(element->variables_exist)
+            {
+                while(*in!='\0' && *in<=' ')
+                    in++;
+                if(*in!='(')
+                {
+                    *line='\0';
+                    char *new_line=concat(line_begin, element->value);
+                    free(line_begin);
+                    if(new_line==NULL)
+                    {
+                        error_malloc();
+                        free(word_begin);
+                        return NULL;
+                    }
+                    lenmax=string_length(new_line)+1;
+                    len=1;
+                    line=new_line+lenmax-1;
+                    line_begin=new_line;
+                    continue;
+                }
+                char **variables_begin=read_variables_values(&in, element->variables_number, word_begin, element->VA_ARGS);
+                if(variables_begin==NULL)
+                {
+                    free(word_begin);
+                    free(line_begin);
+                    return NULL;
+                }
+
+                char *processed_define=process_define_with_variables(element, variables_begin);
+                for(char **variables=variables_begin; variables<variables_begin+element->variables_number; variables++)
+                    free(*variables);
+                free(variables_begin);
+                if(processed_define==NULL)
+                {
+                    free(word_begin);
+                    free(line_begin);
+                    return NULL;
+                }
+                *line='\0';
+                char *new_line=process_define(processed_define);
+                if(new_line==NULL)
+                {
+                    free(processed_define);
+                    free(word_begin);
+                    free(line_begin);
+                    return NULL;
+                }
+                processed_define=new_line;
+                new_line=concat(line_begin, processed_define);
+                free(processed_define);
+                if(new_line==NULL)
+                {
+                    error_malloc();
+                    free(word_begin);
+                    free(line_begin);
+                    return NULL;
+                }
+                lenmax=string_length(new_line)+1;
+                len=1;
+                line=new_line+lenmax-1;
+                line_begin=new_line;
+            }
+            else
+            {
+                *line='\0';
+                char *new_line=concat(line_begin, element->value);
+                free(line_begin);
+                if(new_line==NULL)
+                {
+                    error_malloc();
+                    free(word_begin);
+                    return NULL;
+                }
+                lenmax=string_length(new_line)+1;
+                len=1;
+                line=new_line+lenmax-1;
+                line_begin=new_line;
+            }
+        }
+        else
+        {
+            *line='\0';
+            char *new_line=concat(line_begin, word_begin);
+            free(line_begin);
+            if(new_line==NULL)
+            {
+                error_malloc();
+                free(word_begin);
+                return NULL;
+            }
+            lenmax=string_length(new_line)+1;
+            len=1;
+            line=new_line+lenmax-1;
+            line_begin=new_line;
+        }
+        free(word_begin);
+    }
+    *line='\0';
+    return line_begin;
+}
+
+//Funkcja rozwija podana definicje przyjmujaca dane wartosci jako zmienne
+char* process_define_with_variables(const _define *element, char **variables_names)
+{
+    char *line_begin=(char*)malloc(10*sizeof(char));
+    if(line_begin==NULL)
+    {
+        return NULL;
+    }
+    char *line=line_begin;
+    size_t len=10, len_max=len;
+    int variables_number=0;
+    char *in=element->value;
+    while(*in!='\0')
+    {
+        if(variables_number<element->variables_occur_number &&
+            element->value==in-*(element->variebles_position+variables_number))
+        {
+            char *variable=*(variables_names+*(element->variables_occur+variables_number));
+            *line='\0';
+            char *new_line=concat(line_begin, variable);
+            free(line_begin);
+            if(new_line==NULL)
+            {
+                return NULL;
+            }
+            line=new_line+string_length(new_line);
+            len_max=string_length(new_line)+1;
+            len=1;
+            line_begin=new_line;
+            variables_number++;
+        }
+        line_begin=add_char_to_string(&line, line_begin, &len, &len_max, *in);
+        if(line_begin==NULL)
+        {
+            return NULL;
+        }
+        in++;
+    }
+    *line='\0';
+    return line_begin;
+}
+
+//Funkcja idzie najdalej jak to mozliwe po gotowym drzewie.
+//Brakujace galezie zostaja stworzone po drodze.
+static _define *create_way_to_define(const char *in)
+{
+    _define *element=root;
+    while(element!=NULL && is_letter(*in))
+    {
+        if(*in>='a' && *in<='z')
+        {
+            if(element->childs[*in-'a']==NULL)
+            {
+                if((element->childs[*in-'a']=alloc_define())==NULL)
+                    return NULL;
+            }
+            element=element->childs[*in-'a'];
+        }
+        else if(*in>='A' && *in<='Z')
+        {
+            if(element->childs[26+*in-'A']==NULL)
+            {
+                if((element->childs[26+*in-'A']=alloc_define())==NULL)
+                    return NULL;
+            }
+            element=element->childs[26+*in-'A'];
+        }
+        else if(*in>='0' && *in<='9')
+        {
+            if(element->childs[52+*in-'0']==NULL)
+            {
+                if((element->childs[52+*in-'0']=alloc_define())==NULL)
+                    return NULL;
+            }
+            element=element->childs[52+*in-'0'];
+        }
+        else if(*in=='_')
+        {
+            if(element->childs[62]==NULL)
+            {
+                if((element->childs[62]=alloc_define())==NULL)
+                    return NULL;
+            }
+            element=element->childs[62];
+        }
+        in++;
+    }
+    return element;
+}
+
 //Funkcja wczytuje wartosci, ktore przyjmuje dana definicja.
 //Nastepnie zwraca je w posctaci tablicy.
 char** read_variables_values(char **in, const int number, const char *define_name, bool VA_ARGS)
@@ -597,7 +682,7 @@ char** read_variables_values(char **in, const int number, const char *define_nam
             (*in)++;
         }
         *name='\0';
-        name=process_define(*variables);
+        name=(*variables);
         if(name==NULL)
         {
             error_malloc();
@@ -633,72 +718,3 @@ char** read_variables_values(char **in, const int number, const char *define_nam
     return variables_begin;
 }
 
-//Funkcja rozwija podana definicje przyjmujaca dane wartosci jako zmienne
-char* process_define_with_variables(const _define *element, char **variables_names)
-{
-    char *line_begin=(char*)malloc(10*sizeof(char));
-    if(line_begin==NULL)
-    {
-        return NULL;
-    }
-    char *line=line_begin;
-    size_t len=10, len_max=len;
-    int variables_number=0;
-    char *in=element->value;
-    while(*in!='\0')
-    {
-        if(variables_number<element->variables_occur_number &&
-            element->value==in-*(element->variebles_position+variables_number))
-        {
-            char *variable=*(variables_names+*(element->variables_occur+variables_number));
-            *line='\0';
-            char *new_line=concat(line_begin, variable);
-            free(line_begin);
-            if(new_line==NULL)
-            {
-                return NULL;
-            }
-            line=new_line+string_length(new_line);
-            len_max=string_length(new_line)+1;
-            len=1;
-            line_begin=new_line;
-            variables_number++;
-        }
-        line_begin=add_char_to_string(&line, line_begin, &len, &len_max, *in);
-        if(line_begin==NULL)
-        {
-            return NULL;
-        }
-        in++;
-    }
-    *line='\0';
-    return line_begin;
-}
-
-bool add_variable_occur_to_list(_define *element, int *variables_max, int i, int position)
-{
-    if(element->variables_occur_number==*variables_max)
-    {
-        (*variables_max)*=2;
-        int *new_occ=(int*)realloc(element->variables_occur, (*variables_max)*sizeof(int));
-        if(new_occ==NULL)
-        {
-            return 1;
-        }
-        element->variables_occur=new_occ;
-        int *new_pos=(int*)realloc(element->variebles_position, (*variables_max)*sizeof(int));
-        if(new_pos==NULL)
-        {
-            return 1;
-        }
-        element->variebles_position=new_pos;
-    }
-    *(element->variables_occur+element->variables_occur_number)=i;
-    *(element->variebles_position+element->variables_occur_number)=position;
-    element->variables_occur_number++;
-    if(element->value==NULL)
-    {
-        return 1;
-    }
-    return 0;
-}

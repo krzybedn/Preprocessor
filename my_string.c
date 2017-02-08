@@ -1,5 +1,18 @@
 #include "my_string.h"
 
+
+static char *delete_whitespaces_from_end(char *in);
+static char *delete_comments(char *in, bool *multiline_comment);
+static char *clearing(char *in, bool *multiline_comment);
+static char* add_new_line(char *line_begin, FILE *input_file, char **next_line, bool *multiline_comment);
+
+
+
+bool is_letter(char c)//Liera nazywam dowolny znak sporod malych i duzych liter, cyfr oraz podkreslenia.
+{
+    return ((c>='a' && c<='z') || (c>='A' && c<='Z') || (c>='0' && c<='9') || c=='_');
+}
+
 int string_length(const char *s)
 {
     int res=0;
@@ -8,10 +21,19 @@ int string_length(const char *s)
     return res;
 }
 
-bool is_letter(char c)//Liera nazywam dowolny znak sporod malych i duzych liter, cyfr oraz podkreslenia.
+bool compare(const char *s1, const char *s2)
 {
-    return ((c>='a' && c<='z') || (c>='A' && c<='Z') || (c>='0' && c<='9') || c=='_');
+    while(*s1!='\0' && *s2!='\0')
+    {
+        if(*s1++!=*s2++)
+            return 0;
+    }
+    if(*s1!=*s2)
+        return 0;
+    else
+        return 1;
 }
+
 
 void string_copy(char *s1, const char *s2)
 {
@@ -25,9 +47,9 @@ void string_append(char *s1, const char *s2)
     while((*s1++=*s2++)!='\0');
 }
 
+
 char *add_char_to_string(char **s, char *s_begin, size_t *len,  size_t *lenmax, char c)
 {
-    char *nic=*s;
     if(--(*len)==0)
     {
         *len=*lenmax;
@@ -40,9 +62,7 @@ char *add_char_to_string(char **s, char *s_begin, size_t *len,  size_t *lenmax, 
         *s=s_new+(*s-s_begin);
         s_begin=s_new;
     }
-    nic=*s;
     **s=c;
-    nic=*s;
     (*s)++;
     return s_begin;
 }
@@ -84,19 +104,6 @@ char *get_line(FILE *in)
     return line_begin;
 }
 
-bool compare(const char *s1, const char *s2)
-{
-    while(*s1!='\0' && *s2!='\0')
-    {
-        if(*s1++!=*s2++)
-            return 0;
-    }
-    if(*s1!=*s2)
-        return 0;
-    else
-        return 1;
-}
-
 char *substring(const char *s, int b, int l)
 {
     char *result=malloc(l*sizeof(char));
@@ -134,6 +141,7 @@ char *subword(char **s)
 
 }
 
+
 char *split_by_last_slash(char **address)
 {
     char *address_begin=*address;
@@ -166,7 +174,72 @@ char *split_by_last_slash(char **address)
     return address_begin;
 }
 
-char *delete_comments(char *in, bool *multiline_comment)
+char *concat_multiline(char *begin, FILE *input_file, bool *multiline_comment, char **next_line)
+{
+    char *line_begin=clearing(begin, multiline_comment);
+    if(line_begin==NULL)
+    {
+        return NULL;
+    }
+    if(*line_begin=='#')
+    {
+        while(*(line_begin+string_length(line_begin)-1)=='\\')
+        {
+            //usuwamy znak '\\' z konca linii
+            *(line_begin+string_length(line_begin)-1)='\0';
+            line_begin=add_new_line(line_begin, input_file, next_line, multiline_comment);
+            if(line_begin==NULL)
+                return NULL;
+            if(*next_line!=NULL)
+                return line_begin;
+        }
+    }
+    else
+    {
+        while(*(line_begin+string_length(line_begin)-1)!=';'
+        && *(line_begin+string_length(line_begin)-1)!='{' && *(line_begin+string_length(line_begin)-1)!='}')
+        {
+            line_begin=add_new_line(line_begin, input_file, next_line, multiline_comment);
+            if(line_begin==NULL)
+                return NULL;
+            if(*next_line!=NULL)
+                return line_begin;
+        }
+    }
+    return line_begin;
+}
+
+
+static char *delete_whitespaces_from_end(char *in)
+{
+    char *line=in+string_length(in)-1;
+    while(*line<=' ' && line>in)
+        line--;
+    if(*line<=' ')
+    {
+        free(in);
+        line=malloc(sizeof(char));
+        if(line==NULL)
+            return NULL;
+        *line='\0';
+        return line;
+    }
+    else
+    {
+        int len=line-in+2;
+        char *new_line=realloc(in, sizeof(char)*len);
+        if(new_line==NULL)
+        {
+            free(in);
+            return NULL;
+        }
+        *(new_line+len-1)='\0';
+        return new_line;
+    }
+
+}
+
+static char *delete_comments(char *in, bool *multiline_comment)
 {
     char *line=malloc(10*sizeof(char));
     if(line==NULL)
@@ -221,32 +294,69 @@ char *delete_comments(char *in, bool *multiline_comment)
     return line_begin;
 }
 
-
-char *delete_whitespaces_from_end(char *in)
+static char *clearing(char *in, bool *multiline_comment)
 {
-    char *line=in+string_length(in)-1;
-    while(*line<=' ' && line>in)
-        line--;
-    if(*line<=' ')
+    char *line_begin=delete_comments(in, multiline_comment);
+    if(line_begin==NULL)
     {
-        free(in);
-        line=malloc(sizeof(char));
-        if(line==NULL)
-            return NULL;
-        *line='\0';
-        return line;
+        return NULL;
     }
-    else
+    in=line_begin;
+    in=delete_whitespaces_from_end(line_begin);
+    if(in==NULL)
     {
-        int len=line-in+2;
-        char *new_line=realloc(in, sizeof(char)*len);
+        free(line_begin);
+        return NULL;
+    }
+    return in;
+}
+
+static char* add_new_line(char *line_begin, FILE *input_file, char **next_line, bool *multiline_comment)
+{
+    char *line=get_line(input_file);
+    if(line==NULL)
+    {
+        free(line_begin);
+        return NULL;
+    }
+    if(*line=='\0')
+    {
+        free(line);
+        *next_line=malloc(sizeof(char));
+        **next_line='\0';
+        return line_begin;
+    }
+    if(*line=='#')
+    {
+        *next_line=line;
+        return line_begin;
+    }
+    char *new_line=clearing(line, multiline_comment);
+    free(line);
+    if(new_line==NULL)
+    {
+        free(line_begin);
+        return NULL;
+    }
+    line=new_line;
+    if(*line!='\0')
+    {
+        new_line=concat(line_begin, "\n");
+        free(line_begin);
         if(new_line==NULL)
         {
-            free(in);
             return NULL;
         }
-        *(new_line+len-1)='\0';
-        return new_line;
+        line_begin=new_line;
     }
-
+    new_line=concat(line_begin, line);
+    free(line_begin);
+    free(line);
+    if(new_line==NULL)
+    {
+        return NULL;
+    }
+    return new_line;
 }
+
+
