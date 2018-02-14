@@ -1,6 +1,9 @@
-#ifndef INCLUDE_H_INCLUDED
-/*Krzysztof Bednarek
-292974*/
+/*
+ *	Krzysztof Bednarek
+ */
+
+ #ifndef INCLUDE_H_INCLUDED
+
 
 #define INCLUDE_H_INCLUDED
 

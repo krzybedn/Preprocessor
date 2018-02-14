@@ -1,5 +1,6 @@
-/*Krzysztof Bednarek
-292974*/
+/*
+ *	Krzysztof Bednarek
+ */
 
 #ifndef DEFINE_H_INCLUDED
 #define DEFINE_H_INCLUDED

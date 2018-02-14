@@ -1,5 +1,6 @@
-/*Krzysztof Bednarek
-292974*/
+/*
+ *  Krzysztof Bednarek
+ */
 
 #include "include.h"
 
