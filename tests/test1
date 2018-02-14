@@ -1,0 +1,35 @@
+/* TEST KOMENTARZY */
+
+printf("TEST KOMENTARZY");
+//nic
+// 2asd /* 3asdasd*/
+/* 4asdasd// 5asdasd */to bedzie w pliku wyjsciowym
+/*7asdasd 
+8asdasd */
+
+/* TEST DEFINA */
+
+printf("TEST DEFINOW BEZ ARGUMENTU");
+#define cos (6)
+#define asd (cos+4)
+printf("%d %d", cos, asd);
+
+printf("TEST DEFINOW Z ARGUMENTAMI");
+#define qwe(pi, dr) ((pi)+(dr))
+printf("%d", qwe(4, 7));
+
+/* TEST INCLUDOW + DEFINOW */
+
+printf("TEST INCLUDOW + DEFINOW CHAR_MIN");
+
+#define include smieszny_nie_include
+#include <limits.h>
+
+printf("%d", CHAR_MAX);
+
+/* TEST POWTORNYCH INCLUDOW */
+
+printf("TEST POWTORNYCH INCLUDOW ");
+
+#include <stdio.h>
+#include "preprocesor.h"

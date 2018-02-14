@@ -1,3 +1,6 @@
+/*Krzysztof Bednarek
+292974*/
+
 #include "my_string.h"
 
 

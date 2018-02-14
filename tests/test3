@@ -1,0 +1,16 @@
+#define nic 0x0
+#define funB(x) (cos(x))
+wypisz(nic);
+wypisz("nic");
+
+#define test(a,b,c) \
+	{\
+		funA(a);\
+		funB(b);\
+		funC(c);\
+nic;\
+	}
+
+test(A,B,C)
+
+

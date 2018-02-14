@@ -1,3 +1,6 @@
+/*Krzysztof Bednarek
+292974*/
+
 #include <stdio.h>
 
 void error_malloc()

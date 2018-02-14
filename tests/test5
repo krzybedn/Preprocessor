@@ -1,0 +1,2 @@
+#define cos( a ,  s  ,   as   )       ( a +  as  +   s   )
+printf("%s\n" cos   (    1    ,     2     ,      3      )  );

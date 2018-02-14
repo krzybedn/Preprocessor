@@ -1,3 +1,6 @@
+/*Krzysztof Bednarek
+292974*/
+
 #ifndef PREPROCESOR_H_INCLUDED
 #define PREPROCESOR_H_INCLUDED
 

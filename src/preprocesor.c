@@ -1,3 +1,6 @@
+/*Krzysztof Bednarek
+292974*/
+
 #include "preprocesor.h"
 
 static FILE *output_file;
